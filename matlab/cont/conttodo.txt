@@ -1,0 +1,101 @@
+CONTDATA
+
+ -contdata & contdata utils handle continuous data like eeg, possibly
+  also e.pos, etc
+
+ -obj/cont is mostly a wrapper for the contdata struct. Used for
+  caching, dispatching of processing
+
+TODO:
+ -'just-in-time filtering' on just selected region, rather than whole
+  contdata
+ -contdata/epd merge. named fields, etc? (see also objtodo/sltodo),
+  posfiltsec, posifilt...
+ -test contbouts 'invert'
+ -when multiple channels specified, allow for arbitrary functions
+  (mean/max/min/med/var) on the data.
+ -order of operations for filt/env/mean/chans, etc? Caching gets
+  harder and harder!
+ -history of operations on a cdat? file imported from, etc...? Each
+  cont* function could add an entry to a history list consisting of
+  it's args.
+
+BUGS:
+
+DOC:
+
+    -imcont - import data into contstruct
+    -contfilt - apply filtstruct to contstruct
+    -contresamp - resample data in a contstruct
+    -contchans - select channels from multichannel contstruct
+    -contaddenv - add the 'envelope' as a second channel (hilbert transform)
+    -contbouts - find above-threshold bouts
+
+
+IMCONT
+ -make rate signal from clusters/events? could borrow some code from
+  old/findburst/spkhist (for average rate across multiple clusters)
+
+CONTENV
+CONTRESAMP
+CONTCHANS
+CONTFILT 
+  -what order to do resampling/filtering?
+  -accepts 'filt' objects made by mkfilt, should also accept 'filtopt'?
+  -nonlinear filters?
+
+CONTBOUTS
+  -below-threshold events (added 'invert' option. test?)
+
+MKCONT 
+
+  -is mkcont the 'dispatcher function' takes cont and 'contopt',
+   returns cont? 'resample', 'env', 'align' 'filt', does things in the
+   right order.
+  -is there a right order?: resample, filter (+ autoresample?), env.
+  -cache intermediate steps? (i.e. un-enveloped, filtered signal
+   before taking env?)
+
+MKCONTOPT
+
+  -filtopt
+  -envelope
+  -resample
+
+MKCONTDRAWOPT
+DRAWCONT
+
+-'surf' for drawcont, with non-uniform y-axes?/ or ylabel them
+ correctly. Isn't the idea with cont images is that they are distinct
+ signals? although, consider multiple slopes.
+
+-bars, points, stem (format string in plotdefs)
+
+-subsampling is arbitrary. (e.g. sampsperpix = 20); performs a soft
+ kind of 'max' operation when zoomed out b/c of overlap. Worse for
+ images, no softmax? use downsampnl('arr', contdata, 'newsz' [100 1],
+ 'blkfn', @max, 'decimate', true);
+
+ DATA TIMING
+
+-one big eeg data file across days, (hard b/c diff machines have
+ different timestamps).
+
+-'contalign'? to resample all signals at a new timebase/offset (xi)?
+ using x(findnearest(x,xi,'sorted'), or interp1q for linear
+ interpolation. Since these interps could introduce jitter, phase
+ distortion etc, better to do this before resampling? Yes, since freq
+ (in rad/sample) is lower, and we are closer to DC
+ cf. http://ccrma.stanford.edu/~jos/pasp/Linear_Interpolation_Filter.html
+ 
+-what if we do nearest neighbor across eeg1/2/3 using same xi at near
+ the real samplefreq, but during import and against the real
+ timestamps? then max_tserr is 1/2 sample cycle (= 0.25msec, 1 cycle
+ at 4khz, 1/20th of a cycle at 200Hz = 18deg; ), with very infrequent
+ (can we count them?) jumps where we repeat/miss a sample, with a
+ nasty, local effect. interp1 with pchip is probably healthy and
+ reasonable (cf lagrange interpolation on that website, it's awesome)
+
+-how long does the AD card take to poll the various channels? is this
+ fixed (i.e. <1 ts), no matter what the timing rate.
+
