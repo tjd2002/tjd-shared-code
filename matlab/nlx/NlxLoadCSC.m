@@ -76,6 +76,10 @@ function [cs NumberValid] = NlxLoadCSC(varargin)
 %  -support time ranges (use -Inf/Inf for start/end)
 %  -handle gaps in recording (pad)
 
+%% check dependencies
+
+CheckForNlx2Mat('CSC');
+
 %% constants
 
 % nominal native sampling frequency of Digital Cheetah

@@ -49,6 +49,11 @@ function [ev] = NlxLoadEV(varargin)
 %  -handle eventstrings/manual events if people want them
 %  -'InvertTTL' per channel?
 
+%% check dependencies
+
+CheckForNlx2Mat('EV');
+
+
 %% set up function input arguments
 p = inputParser;
 p.addRequired('Filename', @sub_isfile); 
