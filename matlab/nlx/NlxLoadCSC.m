@@ -83,8 +83,15 @@ CheckForNlx2Mat('CSC');
 %% constants
 
 % nominal native sampling frequency of Digital Cheetah
-cCheetahfS = 32556;
-ts_per_second = 1e6; % 1 microsecond
+CheetahfS = 32556;
+
+% Cheetah timestamps per second
+ts_per_second = 1e6;
+
+% Size of Neuralynx header, in bytes, per
+% http://www.neuralynx.com/static/software/NeuralynxDataFileFormats.pdf
+hdr_bytes = 16384; 
+
 
 %% set up function input arguments
 p = inputParser;
@@ -114,8 +121,19 @@ if ~a.UnwrapBuffers && a.PadMissingSamples,
     warning ('Can only pad missing samples when unwrapping buffers');
 end
 
-% Get time range to load
-% (note Nlx2MatCSC honors -Inf and +Inf as start/end of file, respectively)
+%% handle requested times
+% Get the timestamp of the first and last data buffer in the file, and then
+% 'crop' the requested TimeWin so that it doesn't go beyond these limits
+
+% get the total number of buffers in the file
+hdr = NlxParseHeader(Nlx2MatCSC(a.Filename, [0 0 0 0 0], true, 1));
+finfo = dir(a.Filename);
+nrecords = (finfo.bytes - hdr_bytes) ./ hdr.RecordSize;
+
+% get just the first/last buffer timestamp (note zero-indexed)
+[buff_tsrange] = Nlx2MatCSC(a.Filename, [1 0 0 0 0], false, 3, [0 nrecords-1]);
+
+% Get requested time range in timestamp units
 switch a.TimeUnits
  case 'seconds'
   tsrange = a.TimeWin*ts_per_second;
@@ -123,15 +141,34 @@ switch a.TimeUnits
   tsrange = a.TimeWin/1e6*ts_per_second;
 end
 
-%% set up extraction parameters
+% now handle various problems with the requested times
+
+if tsrange(2) < tsrange(1),
+  error('TimeWin end time must not be before start time');
+end
+
+if tsrange(1) > buff_tsrange(2) || tsrange(2) < buff_tsrange(1)
+  error(sprintf('Requested TimeWin [%0.3f %0.3f] out of range [%0.3f %0.3f].', ... 
+                tsrange, buff_tsrange)); %#ok
+end
+
+% crop to actual timestamp ranges (Nlx2MatCSC v4 for windows barfs on -Inf/Inf)
+if tsrange(1) < buff_tsrange(1),
+  tsrange(1) = buff_tsrange(1);
+end
+
+if tsrange(2) > buff_tsrange(2),
+  tsrange(2) = buff_tsrange(2);
+end
+  
+
+%% set up extraction parameters and run extraction
 FieldSelection = [1 1 1 1 1]; % [timestamps chan fS numvalid samples]
 ExtractHeader = 1;
 ExtractMode = 4; % 1-all, 2-range, 3-list, 4-timestamp range, 5-ts list
-ModeArray = tsrange; % blank for mode 1 (all)
-% 2 elements for range (mode 2 or 4); n elements for list (mode 3 or 5)
-% indexes (mode 2 or 3) are zero-indexed
-
-%% run requested extraction
+ModeArray = tsrange; % blank for mode 1, 2 elements for range (mode 2 or 4);
+                     % n elements for list (mode 3 or 5). indexes (modes 2 and
+                     % 3) are zero-indexed
 
 [cs.bufftimes cs.info.chan cs.info.fS_fromfile NumberValid cs.samples cs.info.rawheader] = ...
     Nlx2MatCSC(a.Filename, FieldSelection, ExtractHeader, ExtractMode, ModeArray);
@@ -208,7 +245,7 @@ if a.CorrectFilterDelay
     filtdelay = ...
         (cs.info.header.DspLowCutNumTaps + ...
          cs.info.header.DspHighCutNumTaps - 1) ...
-         / (2 .* cCheetahfS);
+         / (2 .* CheetahfS);
     cs.bufftimes = cs.bufftimes - filtdelay;
 end
 
