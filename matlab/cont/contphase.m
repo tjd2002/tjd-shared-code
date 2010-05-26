@@ -1,23 +1,34 @@
 function [cout pks pks_t vals vals_t] = contphase(c, varargin)
-% CONTPHASE - return a cdat with the wrapped phase of the input
+% CONTPHASE - compute the instantaneous phase at each sample of a cont struct
 %
-% methods:
-% 'method's:
-%  -interp_peak: interpolate phase between peaks
-%  -interp_valley: ditto for valleys 
-%  -interp_both; interp peak-valley and valley-peak separately (Klausberger's method)
-%  -hilbert (imaginary part of h transform is phase)
-  
+% [cout pks pks_t vals vals_t] = contphase(cont, [name/value pair args]
 %
+% Args:
+%  cont = cont structure 
+%  'method' - one of:
+%     -'interp_peak' interpolate phase linearly between peaks
+%     -'interp_valley'  ditto, but for valleys 
+%     -'interp_both' interp peak-valley and valley-peak separately (Klausberger's method)
+%     -'hilbert' imaginary part of hilbert transform is inst phase (default)
+%  'unwrap': whether to unwrap phase to avoid discontinuities. (Useful for
+%            later interpolation with contlookup.)
+%     -true/false (default false)
+% 
+% Note that it is only valid to compute the instantaneous phase of a
+% signal with a narrow bandwidth, i.e. one that has been passed through a
+% bandpass filter.
+%
+% Tom Davidson <tjd@alum.mit.edu>, 2010
+
 % todo:
-%  -new name?
 %  -multiple channels (use contlocalmax, loops);
 %  -deal with spurious peaks/valleys at start/end of signal (use nbad_*
 %  fields?)
   
     
   a = struct(...
-      'method', 'hilbert');
+      'method', 'hilbert',...
+      'unwrap', false);
   
   a = parseArgsLite(varargin, a);
   
@@ -41,7 +52,7 @@ function [cout pks pks_t vals vals_t] = contphase(c, varargin)
     suffix = '_phase_hilb';
     % hilbert seems to be buggy with 'single' data
     cout.data = cast(angle(hilbert(double(c.data))), class(c.data));
-    sampwin = [cout.tstart cout.tend];d
+    sampwin = [1 size(cout.data,1)];
    
    case 'interp_peak',
     suffix = '_phase_peaks';
@@ -165,11 +176,17 @@ function [cout pks pks_t vals vals_t] = contphase(c, varargin)
     
   end
 
+  %% done calculating phase, cleanup and save out
+  
   % hold off on clipping until now, so that we can still use indexes
   cout = contwinsamp(cout, sampwin);
   
+  % unwrap phase, if requested
+  if a.unwrap,
+      cout.data = unwrap(cout.data,[],1);
+  end
+  
   % create new chanlabels
-
   cout.name = [c.name suffix];
   if ~isempty(c.chanlabels),  
     for k = 1:nchans,
