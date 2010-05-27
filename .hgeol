@@ -1,0 +1,16 @@
+[patterns]
+**.m = native
+**.txt = native
+**.c = native
+**.h = native
+**README = native
+; default is BIN
+
+; Could also specify which files to *not* convert
+; **.mat = BIN
+; **.o = BIN
+; re:*\.{M,m}{E,e}{X,x} = BIN
+; ** = native
+
+[repository]
+native = LF
