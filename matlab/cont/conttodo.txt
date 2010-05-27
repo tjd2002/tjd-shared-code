@@ -1,21 +1,33 @@
 CONTDATA
-
  -contdata & contdata utils handle continuous data like eeg, possibly
   also e.pos, etc
-
  -obj/cont is mostly a wrapper for the contdata struct. Used for
   caching, dispatching of processing
 
 TODO:
+ -update documentation/helptext
+ -merge cont obj with cont data:
+  -make an hg branch!
+  -just add fields from obj to cdat:
+   -timewin/timewini/chans/chanlabels can go into contdrawopt? --how
+    to plot multiple views on a single cdat?
+   -keep contvar idea around, but now as a sibling
+    relationship/deprecated hack
+   -get rid of filtopt/envopt/chans abstraction layer, and require user to
+    actually perform operations before plotting?
+    -does away with nice ability to specify filter props in plots? but
+     we can reimplement this above cont
+    -update obj cache searching (should be easier?)
+
  -'just-in-time filtering' on just selected region, rather than whole
   contdata
  -contdata/epd merge. named fields, etc? (see also objtodo/sltodo),
   posfiltsec, posifilt...
- -test contbouts 'invert'
  -when multiple channels specified, allow for arbitrary functions
   (mean/max/min/med/var) on the data.
  -order of operations for filt/env/mean/chans, etc? Caching gets
   harder and harder!
+
  -history of operations on a cdat? file imported from, etc...? Each
   cont* function could add an entry to a history list consisting of
   it's args.
@@ -23,29 +35,28 @@ TODO:
 BUGS:
 
 DOC:
-
     -imcont - import data into contstruct
     -contfilt - apply filtstruct to contstruct
     -contresamp - resample data in a contstruct
     -contchans - select channels from multichannel contstruct
-    -contaddenv - add the 'envelope' as a second channel (hilbert transform)
+    -contenv - add the 'envelope' as a second channel (hilbert transform)
     -contbouts - find above-threshold bouts
 
 
-IMCONT
- -make rate signal from clusters/events? could borrow some code from
-  old/findburst/spkhist (for average rate across multiple clusters)
-
+IMCONT/IMCONTHIST
 CONTENV
 CONTRESAMP
 CONTCHANS
+CONTPHASE
+  -handle multiple channels
 CONTFILT 
   -what order to do resampling/filtering?
-  -accepts 'filt' objects made by mkfilt, should also accept 'filtopt'?
-  -nonlinear filters?
+  -accepts 'filt' objects made by mkfilt, should also just accept 'filtopt'?
+  -nonlinear filters? test islinear?
 
 CONTBOUTS
   -below-threshold events (added 'invert' option. test?)
+
 
 MKCONT 
 
