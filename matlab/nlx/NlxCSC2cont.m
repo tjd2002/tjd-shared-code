@@ -1,30 +1,30 @@
-function [cdat_lfps] = NlxCSC2cont (varargin)
-% Load all CSC files from a recording session into a single cont struct
-% Defaults to loading all *.ncs files from the directory called 'LFP'
+function [cdat_cscs] = NlxCSC2cont (varargin)
+% Load several Neuralynx CSC files into a single cont struct
+% Defaults to loading all *.ncs files from the current directory
 %
 % Specify files to load using:
+%  'CSCDir': folder containing CSC files (defaults to current dir)
+%  'CSCFilenames': pattern to match for files to be loaded (default: '*.ncs')
+%                  if a cell array, files matching each pattern will be
+%                  loaded
+%     --OR--
 %  'CSCFilePaths' full path to each CSC file (cell array of strings)
-%   -OR-
-%  'SessDir' : top-level folder (string; defaults to current dir)
-%  'CSCDir' : folder containing CSC files (defaults to 'LFP')
-%  'CSCFilenames' : pattern to match for files to be loaded (default: '*.ncs')
-%               if a cell array, files matching each pattern will be
-%              loaded
 %
+%  'TimeWin': start/end of time to be imported (m x 2 array; default: all data)
+%  'Name': name of cont struct (default: built from file paths)
+
 % e.g. To load only LFP/LFP1.ncs and LFP/LFP3.ncs:
 %
-%  >> cdat_LFP = NlxCSC2cont('SessDir', 'wallaceII_day3',...
-%                               'CSCDir', 'LFP',...
-%                               'CSCRegexp', {'LFP1*' 'LFP3*'})
+%  >> cdat_LFPs = NlxCSC2cont('CSCDir', '/home/tjd/data/wallaceII_day3/LFP',...
+%                            'CSCFilenames', {'LFP1.ncs' 'LFP3.ncs'})
 
 % TODO:
-% -handle file regexps
+% -handle file regexps rather than shell globbing?
 
 %% parse and process inputs
 p = inputParser;
 p.addParamValue('CSCFilePaths', []);
-p.addParamValue('SessDir', [], @isdir);
-p.addParamValue('CSCDir', 'LFP');
+p.addParamValue('CSCDir', '');
 p.addParamValue('CSCFilenames', '*.ncs');
 p.addParamValue('TimeWin', [-Inf Inf], @isnumeric);
 p.addParamValue('Name', [], @ischar);
@@ -45,28 +45,29 @@ if ~isempty(a.CSCFilePaths),
     
 else % build up file names from specified directories and regexps
     
-    if isempty(a.SessDir),
-        warning(['using current working directory for SessDir: ' pwd]);
-        a.SessDir = pwd;
+    if isempty(a.CSCDir),
+        warning(['No ''CSCDir'' provided; using current working directory: ' pwd]); %#ok
+        a.CSCDir = pwd;
     end
     
-    % get our working directory
-    wd = [a.SessDir '/' a.CSCDir];
-    if ~isdir(wd)
-        error(['Specified directory does not exist: ' wd]);
+    if ~isdir(a.CSCDir)
+        error(['Specified directory does not exist: ' a.CSCDir]);
     end
+
+    % make sure there's a separator at the end
+    a.CSCDir(end+1) = filesep;
     
+    % convert string arg to cell array
     if ischar(a.CSCFilenames),
        a.CSCFilenames = {a.CSCFilenames};
     end
 
-    CSCfiles = {};
-    CSCdir = [a.SessDir '/' a.CSCDir '/'];
+    CSCFiles = {};
     for j = 1:numel(a.CSCFilenames),
-        dtmp = dir([CSCdir a.CSCFilenames{j}]);
+        dtmp = dir([a.CSCDir a.CSCFilenames{j}]);
         matches = {dtmp.name};
         for k = 1:numel(matches)
-            CSCfiles = [CSCfiles; {fullpath([CSCdir matches{k}])}];
+            CSCFiles = [CSCFiles; {fullpath([a.CSCDir matches{k}])}];
         end
     end
     
@@ -76,20 +77,23 @@ else % build up file names from specified directories and regexps
     else
         CSCFilenamesStr = cell2str(a.CSCFilenames);
     end
-    cdatName = [CSCdir CSCFilenamesStr];
+    cdatName = [a.CSCDir CSCFilenamesStr];
      
 end % we should now have a cell array of full paths, 1 per file
 
+if ~exist('CSCFiles', 'var') || isempty(CSCFiles),
+  error('No filenames matched');
+end
 
-for j = 1:numel(CSCfiles),
-    CSCfile = CSCfiles{j};
+for j = 1:numel(CSCFiles),
+    CSCFile = CSCFiles{j};
     
     % show progress
-    disp(['Loading CSC file ' num2str(j) ' of ' num2str(numel(CSCfiles)) ...
-        ' : ' CSCfile]);
+    disp(['Loading CSC file ' num2str(j) ' of ' num2str(numel(CSCFiles)) ...
+        ' : ' CSCFile]);
     
     % load file into temporary struct
-    csc = NlxLoadCSC(CSCfile,...
+    csc = NlxLoadCSC(CSCFile,...
                      'TimeWin', a.TimeWin,...
                      'DataUnits', 'mV', ...
                      'TimeUnits', 'seconds', ...
@@ -97,20 +101,20 @@ for j = 1:numel(CSCfiles),
                      'CorrectFilterDelay', true);
     
     % convert to contstruct (compatible with Tom's viewer and cont* functions)
-    cdat_lfps{j} = imcont('neuralynxCSC', csc);
+    cdat_cscs{j} = imcont('neuralynxCSC', csc);
 
 end
 
 % merge multiple channels into one contstruct
-if numel(cdat_lfps)>1
-    cdat_lfps = contcombine(cdat_lfps{1}, cdat_lfps(2:end));
+if numel(cdat_cscs)>1
+    cdat_cscs = contcombine(cdat_cscs{1}, cdat_cscs(2:end));
 end
 
 % assign name to struct
 if ~isempty(a.Name)
-    cdat_lfps.name = a.Name;
+    cdat_cscs.name = a.Name;
 else
     warning (['No ''Name'' provided; using default struct name: ' cdatName]);
-    cdat_lfps.name = cdatName;
+    cdat_cscs.name = cdatName;
 end
                  
