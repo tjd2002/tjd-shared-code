@@ -1,9 +1,12 @@
 function [ev] = NlxLoadEV(varargin)
-% NlxLoadEV: gets raw data and headers from a .nev file
+% NlxLoadEV: parses raw digital TTL pulse data from a .nev file
 %
-% Wrapper for Nlx2MatEV. Loads data, parses headers 
+% 'Filename': Full path to '*.nev' file
+% 'TimeUnits': Time units for output: 'seconds' (default), 'microseconds'
+% 'FindPulses': Parse TTL codes to generate a list of pulse start/end
+%               times for each channel. True (default), false.
 %
-% 4/22/10 -- Tom Davidson (tjd@alum.mit.edu)
+% Tom Davidson <tjd@stanford.edu>, Apr. 2010
 
 % NOTES:
 %
@@ -23,18 +26,18 @@ function [ev] = NlxLoadEV(varargin)
 %   times for each TTL channel going high.
 %
 %  -events can also be generated manually by the user, or by sending NetCom
-%  commands over the network, or by the use of external digital IO cards.
-%  These do not change the nTTL field, and are not currently supported by
-%  this wrapper function.
+%   commands over the network, or by the use of external digital IO cards.
+%   These do not change the nTTL field, and are not currently supported by
+%   this wrapper function.
 %
 %  -eventID is always 0 for TTL pulses on Digital Lynx, so we ignore it for
-%  now
+%   now
 %
 %  -eventstring is redundant for TTL pulses, e.g. 'Digital Lynx Parallel
-%  Input Port TTL (0x4000)', so we ignore it for now
+%   Input Port TTL (0x4000)', so we ignore it for now
 %
 %  -extras never contains anything other than zeros, so we ignore it for
-%  now
+%   now
 %
 %  -Timestamps are stored as unsigned 64-bit integers (uint64) in the
 %   original file, but returned as double-precision floats. There's no
