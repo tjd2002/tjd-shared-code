@@ -1,64 +1,90 @@
 function c = imconthist(varargin)
-% IMCONTHIST make contdata struct from event list (histogram)
+% IMCONTHIST - create rate histogram cont structs from lists of event times 
 %
-% pass in evtimes, values, can threshold on values
+%  c = imconthist([name/value pairs])
 %
-% possible inputs:
-%  
-%  'cls': e.cl structure array. If provided, we will extract evtimes, 
+% By default, creates a cont struct with one channel per event list
+% provided, with rate in Hz.
+%
+% Inputs: (* means required, -> indicates default value)
+%
+%  Basic Inputs:
+%  *'evtimes' - numeric vector of event times (or cell array of vectors)
+%  *'timewin': range of time over which to calculate histogram, in 'timeunits'.
+%       (If you don't provide a timewin, imconthist will treat the first and
+%       last event times as the timewin; this could introduce bias into
+%       edge bins.)
+%  *'histbinsize' - size of hist bins, in 'timeunits'.
+%   'timeunits' - (->'seconds', 'microseconds', 'MWL_timestamps',
+%       'NLX_timestamps')
+%   'convert_freq' - if true, return rate as events/s, rather than event
+%       counts/bin (default true).
+%   'merge' - if true, merge all events provided into a single histogram
+%       (default false).
+%   'mergenorm' - if true, normalize (divide) histogram by number of input
+%       lists, giving average rate; if false, sum events in each time bin
+%       (default true).
+%
+%  Inputs controlling filtering of events based data associated with each
+%  event:
+%   'data' - data associated with each spike (vector or cell array of
+%       vectors same size as 'evtimes')
+%   'thresh_val' - threshold to apply to each data
+%   'thresh_fn' - thresholding function (defaults to '@gt', greater-than)
+%
+%   'name' - a name for the contstruct (default based on filename)
+%   'chanlabels' - cell array of strings to label each new channel
+%   'convertdatafun' - defaults to '@single'; use [] to not convert
+%   'suffix' - string to append to computed chanlabels (default 'rate')
+%
+%  Specialized inputs:
+%   Instead of evtimes/data, can provide an array of cluster (.cl)
+%   structures containing named data fields:
+%    'cls': e.cl structure array. If provided, we will extract evtimes, 
 %         chanlabels, and optionally data (see next option)
-%  'cls_thresh_fld': optional named field to use for data for thresholding
-%  'cls_merge': if true, merge all events in all clusters into a single histogram
+%    'cls_thresh_fld': optional named field to use for data for thresholding
 %
-%  'evtimes' = m x 1 numeric array of event times.
-%  'timeunits' defaults to 'seconds'
-%  'data' (optional) (m x 1 numeric data to use for thresholding)
 %
-%  'histbinsize' size of hist bins, in timeunits
+% Outputs:
+%  c: cont struct ('help imcont' for details)
+%   -data is in events/timeunit (so, by default, Hz)
 %
-%  if 'data' or 'cls_thresh_fld' is provided, we can select which events
-%  to include in the histogram.
-%     'thresh_val', only 
-%     'thresh_fn' defautls to '@gt', greater-than, >
 %
-%  'timewin': range of evtimes to select (selected range will enclose request)
-%  'name': a name for the contstruct (default based on filename, chans)
-%  'convertdatafun' : defaults to '@single'; use [] to not convert
-%  'chanlabels': for 2-d data, values associated with each column (slopes,
-%              e.g.) for plotting as images/surfs;
-%  'convert_freq': if true, report hist as frequency in Hz, rather than event
-%          counts/bin. (default false)
+% Example: From a list of spike times for 3 electrodes, (in variables t1, t2, and
+%     t3, seconds), and corresponding lists of peak amplitude for each spike (in
+%     pks1-pks3, mV), calculate average firing rate per electrode in Hz, in 25ms
+%     bins, but only including spikes that reach at least 100uV, and only
+%     for the period 1000-2000s.
 %
-% output struct:
+%   cont_mua = imconthist('evtimes', {t1 t2 t3},...
+%                         'timewin', [1000 2000],...
+%                         'histbinsize', 0.025,...
+%                         'convert_freq', true,...
+%                         'data', {pks1 pks2 pks3},...
+%                         'thresh_val', 0.100,...
+%                         'merge', true,...
+%                         'mergenorm', true,...
+%                         'chanlabels', {'MUA rate, cells 1-3'}) 
 %
-% $$$    -contdata struct:
-% $$$      -name
-% $$$      -data (anything numeric)
-% $$$      -chanvals (for 2-D data, values associated with each column)
-% $$$      -chanlabels (for 2-D data, labels for each column) cell array of strings
-% $$$      -samplerate (derived, not reported; in samples/second)
-% $$$      -tstart,tend (time of first/last sample; in seconds)
-% $$$      -datarange (advisory limits of data -- useful for plotting, but
-% $$$       not guaranteed to be real limits of data)
-% $$$      -units (descriptive string)
-% $$$      -nbad_start and nbad_end: samples that are unreliable due to filtering
-% $$$
-% $$$      -[sourcefile/channel]
-% $$$      -[prefilt - analog filtering by amplifier]
-% $$$      -[filters{m} - actual filters applied (using filtfilt)]
-%
-% todo:
-% -input checking before all the loading/parsing/resampling, to save user
-% hassle, esp chanvals and chanlabels
-
-  ts_per_sec = 1e4; % 10000 timestamps/second
+% Tom Davidson <tjd@stanford.edu> 2003-2010
   
+% TODO:
+%  -change histbinsize, timewin, to be in seconds, regardless of
+%  'timeunits'. (change name of timeunits to 'evtimeunits' to reflect
+%  change).
+
+%% constants
+  AD_ts_per_sec = 1e4; % MWL's 'AD' timestamps
+  NLX_ts_per_sec = 1e6; % Neuralynx timestamps
+  
+  %% parse inputs
   a = struct(...
-      'cls', [],...
-      'cls_thresh_fld', '',...
-      'cls_merge', false,...
       'evtimes', [],...
       'data', [],...
+      'cls', [],...
+      'cls_thresh_fld', '',...
+      'merge', false,...
+      'mergenorm', true,...
       'histbinsize', [],...
       'thresh_val',[],...
       'thresh_fn',@gt,...
@@ -67,122 +93,163 @@ function c = imconthist(varargin)
       'timeunits', 'seconds',...
       'convertdatafun', @single,... 
       'chanlabels', {{}},...
-      'convert_freq', false);
+      'suffix', 'rate',...
+      'convert_freq', true);
   
   a = parseArgsLite(varargin,a);
-  
-  c = struct('name', [],...
-             'data', [],...
-             'chanvals', [],...
-             'chanlabels', [],...
-             'samplerate',[],...
-             'tstart',[], 'tend',[],...
-             'datarange',[],...
-             'units', '',...
-             'nbad_start',0,...
-             'nbad_end',0,...
-             'max_tserr', []);
 
+  c = mkcdat('name', a.name);
+  
   % require histbinsize
   if isempty(a.histbinsize),
     error('must provide ''histbinsize''');
   end
   
-  % pass through name, if given
-  c.name = a.name;
-
-  if length(a.cls) < 2,
-    a.cls_merge = false;
+  % only one input method at a time, please
+  if ~isempty(a.cls) && ~isempty(a.evtimes)
+    error('Can only provide one of ''cls'', and ''evtimes''');
   end
   
   % parse timeunits
-  switch(a.timeunits)
-   case 'timestamps', 
-    time_in_ts = true;
+  switch lower(a.timeunits)
+   case 'MWL_timestamps', 
+    ts_per_sec = AD_ts_per_sec;
+   case {'NLX_timestamps'};
+    ts_per_sec = NLX_ts_per_sec;
+   case {'microseconds'}
+    ts_per_sec = 1e6;
    case 'seconds', 
-    time_in_ts = false;
+    ts_per_sec = 1;
    otherwise
     error('unrecognized ''timeunits'' string');
   end
 
-  % pass through chanlabels, if given
-  if ~isempty(a.chanlabels) && length(a.chanlabels) ~= ncols,
-    error('''chanlabels'' must have as many entries as data columns');
-  else
-    c.chanlabels = a.chanlabels(:)'; %row
-  end
-  
   evtimes = {};
   datas = {};
   
+  %% get evtimes and datas from cls
   if ~isempty(a.cls),
     for k = 1:length(a.cls)
       evtimes{k} = getepd(a.cls(k),'time');
       if ~isempty(a.cls_thresh_fld),
         datas{k} = getepd(a.cls(k),a.cls_thresh_fld);
-      end
-    
-      if isempty(a.chanlabels),
-        if a.cls_merge
-          % only one channel, label it
-          label = strvcat(a.cls.name); %#ok
-          label = [label repmat('_',size(label,1),1)]';
-          % leave off last char b/c it's a '_'
-          c.chanlabels{1} = ['merge_' label(1:end-1)];
-        else
-          c.chanlabels{k} =  a.cls(k).name;
-        end
+        usedata = true;
+      else
+        usedata = false;
       end
     end
-    
-    if a.cls_merge,
-      evtimes = {vertcat(evtimes{:})};
-      datas = {vertcat(datas{:})};
-    end
-    
     
   else
-    % no cls, get evtimes, data from args
+
+    %% no cls, get evtimes, data from args
     
+    % convert to cell arrays if nec
     if ~iscell(a.evtimes),
       evtimes = {a.evtimes};
     else
       evtimes = a.evtimes;
     end
     
-    if ~iscell(a.data),
-      datas = {a.data};
+    % are we going to select events using data?
+    usedata = ~isempty(a.data);   
+    if usedata
+      if ~iscell(a.data),
+        datas = {a.data};
+      else
+        datas = a.data;
+      end
+
+      % make sure we have matching numbers of time/data inputs
+      if numel(evtimes) ~= numel(datas),
+        error(['If ''data'' provided, must provide one vector for each list     ' ...
+               'of ''evtimes''.']);
+      end
+      
+    end
+  end
+  
+  % make sure evtimes/data are equal-sized column vectors
+  for k = 1:numel(evtimes)
+
+    if ~isvector(evtimes{k})
+      error('Times must be provided as vectors');
+    else
+      % convert to column vector
+      evtimes{k} = evtimes{k}(:);
+    end
+    
+    if usedata
+      if any(size(datas{k} ~= size(evtimes{k})))
+        error(['''data'' lists must be same size as ''evtimes'' lists ' ...
+               '(#%d)']);
+      end
+      if ~isvector(datas{k})
+        error('Times must be provided as vectors');
+      else
+        datas{k} = datas{k}(:);
+      end
     end
   end
 
+  % how many inputs (before merging)?
+  ninputs = numel(evtimes);
+  
+  % merge times / datas across lists if requested
+  if a.merge,
+    evtimes = {vertcat(evtimes{:})};
+    datas = {vertcat(datas{:})};
+  end
+  
+  % how many histograms?
+  nhists = numel(evtimes);
   
   % if no timewin provided, calculate
   if isempty(a.timewin) || any(isinf(a.timewin))
-    if isempty(evtimes),
-      error('no/inf timewin and no events; can''t make histogram');
-    else
-      warning('no timewin, using first/last event as window');
-      alltimes = (vertcat(evtimes{:}));
-      a.timewin = [ min(alltimes) max(alltimes) ];
+
+    % find min/max event time across all inputs (memory efficient)
+    t_min = Inf; t_max = -Inf;
+    for k = 1:nhists
+      t_min = min(t_min, min(evtimes{k}));
+      t_max = max(t_max, max(evtimes{k}));
     end
+    
+    if isinf(t_min),
+      % there were no events in any list
+      error('No ''timewin'' and no events; can''t make histogram');
+    end
+
+    warning('No ''timewin'' provided, so using first/last event as window');
+    timewin = [t_min t_max];
+  
+  else
+    % use provided timewin
+    timewin = a.timewin;
+  end
+
+  if diff(timewin)<0,
+    error('Timewin must be non-decreasing: Timewin = [%d %d]', timewin(1), ...
+          timewin(2));
+  end
+  if diff(timewin)<a.histbinsize,
+    error('Timewin must be at least 1 hist bin wide: Timewin = [%d %d]', timewin(1), ...
+          timewin(2));
   end
   
-  
   % make histbins
-  histbin_edges = a.timewin(1):a.histbinsize:a.timewin(2);
+  histbin_edges = timewin(1):a.histbinsize:timewin(2);
   
   % loop over cell array of evtimes
-  for k = 1:length(evtimes)
+  for k = 1:nhists
     evt = evtimes{k};
 
-    % select above-threshold events
+    % select events meeting threshold
     if ~isempty(a.thresh_val),
       evti = a.thresh_fn(datas{k}, a.thresh_val);
       evt = evt(evti);
     end    
 
-    % get event histogram (-Inf is hack to deal with empty evt)
-    evt_hist = histc([-Inf; evt(:)], histbin_edges);
+    % get event histogram (Inf is hack to deal with empty evt list)
+    evt_hist = histc([evt(:); Inf], histbin_edges);
 
     % discard last bin (values equal to highest edge, zero-width bin)
     evt_hist = evt_hist(1:end-1);
@@ -194,7 +261,7 @@ function c = imconthist(varargin)
       evt_hist = evt_hist./a.histbinsize;
 
       % if timeunits are timestamps, extra conversion to get Hz
-      if time_in_ts
+      if ts_per_sec~=1
         spks_hist = spks_hist .* ts_per_sec;
       end
     else
@@ -202,8 +269,8 @@ function c = imconthist(varargin)
     end
     
     % if merging multiple clusters, get average f.r.per cluster
-    if a.cls_merge,
-      evt_hist = evt_hist./length(a.cls);
+    if a.merge && a.mergenorm
+      evt_hist = evt_hist./ninputs;
     end
 
     % store each 
@@ -215,15 +282,51 @@ function c = imconthist(varargin)
   c.tend = histbin_edges(end)- (0.5*a.histbinsize);
 
   % convert from timestamps if requested
-  if time_in_ts,
+  if ts_per_sec ~= 1,
     c.tstart = double(c.tstart) ./ ts_per_sec;
     c.tend = double(c.tend) ./ ts_per_sec;
   end
 
   % samplerate is exact, no ts error introduced by histc
   c.samplerate = 1/a.histbinsize;
-    
-  %%% useful when plotting; nice to precompute, even though it's slow
+
+  %% Make some nice chanlabels
+      
+  % pass through chanlabels, if given
+  if ~isempty(a.chanlabels)
+    if numel(a.chanlabels) ~= nhists,
+      error('''chanlabels'' must have as many entries as evtimes/cls');
+    else
+      c.chanlabels = a.chanlabels(:)'; % make a row
+    end
+  else
+    % no labels provided, can we make them from the .cls?
+    if ~isempty(a.cls)
+      if a.merge
+        % only one channel, label it
+        label = strvcat(a.cls.name); %#ok
+        label = [label repmat('_',size(label,1),1)]';
+        % leave off last char b/c it's a '_'
+        c.chanlabels{1} = ['merged_' label(1:end-1)];
+      else
+        c.chanlabels{k} =  a.cls(k).name;
+      end
+    else
+      % no chanlabels, no .cls, just number the channels
+      if a.merge
+        c.chanlabels{1} = 'merged';
+      else 
+        for k = 1:nhists
+          c.chanlabels{k} = num2str(k);
+        end
+      end
+    end
+    for k = 1:nhists
+      c.chanlabels{k} = [c.chanlabels{k} '_' a.suffix];
+    end
+  end
+
+  % update data range
   c = contdatarange(c);
   
   % convert datatype last-ish
@@ -231,9 +334,8 @@ function c = imconthist(varargin)
     c.data = a.convertdatafun(c.data);
   end
   
-  
-  if ~time_in_ts && (c.tend - c.tstart) > (50 * ts_per_sec);
-    warning(['timestamps reported to be in seconds, may be in timestamp ' ...
-             'units']);
+  if ts_per_sec==1 && (c.tend - c.tstart) > (50 * ts_per_sec);
+    warning(['timestamps reported to be in seconds, but may be in timestamp ' ...
+             'units (range: %d - %d'], c.tstart, c.tend);
   end
   
