@@ -3,7 +3,7 @@ function [cs NumberValid] = NlxLoadCSC(varargin)
 %
 % Wrapper for Nlx2MatCSC. Loads data, parses headers, converts units 
 %
-% 4/22/10 -- Tom Davidson
+% Tom Davidson <tjd@stanford.edu> 4/2010
 
 % NOTES:
 %  -Samples are stored as 16-bit signed integers in the .ncs file, (per
@@ -96,7 +96,7 @@ hdr_bytes = 16384;
 %% set up function input arguments
 p = inputParser;
 p.addRequired('Filename', @sub_isfile); 
-p.addParamValue('TimeWin', [-Inf Inf], @isnumeric); % in TimeUnits!
+p.addParamValue('TimeWin', [], @isnumeric); % in TimeUnits!
                                                     % (usually seconds)
 p.addParamValue('Datatype', 'single', @(s)sub_isinlist(s,{'single','double','int16', 'int32'}));
 p.addParamValue('DataUnits', 'mV', @(s)sub_isinlist(s,{'ADbits','mV','V'}));
@@ -132,6 +132,11 @@ nrecords = (finfo.bytes - hdr_bytes) ./ hdr.RecordSize;
 
 % get just the first/last buffer timestamp (note zero-indexed)
 [buff_tsrange] = Nlx2MatCSC(a.Filename, [1 0 0 0 0], false, 3, [0 nrecords-1]);
+
+% Empty timewin means select all times
+if isempty(a.TimeWin),
+  a.TimeWin = [-Inf Inf];
+end
 
 % Get requested time range in timestamp units
 switch a.TimeUnits
