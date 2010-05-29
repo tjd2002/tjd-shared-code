@@ -1,71 +1,108 @@
 function c = imcont(varargin)
-% IMCONT make contdata struct from timeseries/mwl eeg struct/.eeg file
+% IMCONT - create cont data struct from timeseries data
 %
-% possible inputs and their implied options:
+% Creates a 'cont' data struct from timeseries data (fields documented in
+% 'outputs', below). Multiple channels with the same time base can be stored
+% in the same cont struct. Cont structs can be operated on by the cont*
+% family of functions (contfilt, contcombine, contresamp, contwin ...), most
+% of which produce another cont struct as their output.
+%
+% NB there are other functions to import data into cont structs:
+%  imconthist - create a rate histogram from a list of event times.
+%  imcontsegs - create a cont struct from discontinuous chunks of
+%      timeseries data.
+%
+% Inputs: (* = required, -> indicates a default value)
+%  You can provide timeseries data in a number of formats, including
+%  data in variables, or paths to files. Where available, sampling rate,
+%  data units, and other signal metadata (e.g. channel name) is extracted
+%  from the data files.
+%
+%   Raw Data:
+%   *'data' - numeric data (m x n channels)
+%    'timestamp' - time in seconds at each data point
+%    'timestamp_ends' - time of first/last sample
+%    Effect on other inputs:
+%     'timeunits' - defaults to 'seconds'
+%     'invert' defaults to false
+%
+%   Neuralynx .csc data struct, as imported by Tom's NlxLoadCSC function
+%   *'neuralynxCSC' - struct from NlxLoadCSC
+%    Effect on other inputs:
+%     'timeunits' = specified by struct
+%     'dataunits' = specified by struct
+%     'invert' = specified by header's 'InputInverted' field
+%     'chanlabels' - defaults to header's 'AcqEntName' field
+%
+%   Wilson Lab (MIT) .eeg file - Note: depends on Fabian's mwlIO library
+%   *'eegfile'/'mwlIOeegfh' = filename/filehandle (from mwlopen) of .eeg file
+%    'chans' - vector of channels to use (import all by default)
+%    Effect on other inputs:
+%     'timeunits' = 'MWL_timestamps'
+%     'invert' - (default: true)
 %  
-%  'eegfile'/'mwlIOeegfh' = name/filehandle (from mwlopen) of .eeg file
-%  -'chans' = vector of channels to use (required)
-%  -'timeunits' = 'timestamps' as returned from mwleegfile/load
-%  -'data' = data (m x n channels)
-%    -if either data or timestamp not provided, load both from file
-%    -'timeunits' defaults to 'timestamps'
+%   E.pos struct (as used in Tom's expt struct)
+%   *'epos' - the epos struct
+%   *'eposflds' - names of epos fields to import as channels (string / cell
+%       array of strings)
+%    Effect on other inputs:
+%     'timeunits' - defaults to 'seconds'
+%     'invert' - defaults to false
 %
-%  'eeg' = struct from eeg2mat
-%   -'timeunits' defaults to 'seconds'
-%   -'dataunits' is derived from eeg.info, converted to mV
-%   -can't select chans, just use all
-%  
-%  'neuralynxCSC' = struct from NlxLoadCSC
-%    (must have 'samptimes', 'samples', 'timeunits', 'dataunits'  fields)
-%   -'timeunits' specified by struct
-%   -'dataunits' specified by struct
-%   -'invert' derived from ncs.info.header.InputInverted 
-%   -'chanlabels' specified from ncs.info.header.AcqEntName
+%  Shared Inputs: (may be implied/overwritten depending on import type, above)
+%   'invert' - Whether to invert the sign of the data. (see above for defaults)
+%   'resample'- resamples data (using contresamp) by given factor.
+%   'timewin'- range of times to select (seconds).
+%   'name'- a name for the contstruct (default based on filename, chans).
+%   'convertdatafun' - defaults to '@single'; use [] for no conversion.
+%   'chanvals'- for 2-d data, scalar values associated with each channel.
+%   'chanlabels'- text labels for channels.
+%   'dataunits'- defaults to '' (attempts to convert to mV if possible).
+%   'timeunits'- 'MWL_timestamps', 'microseconds' or 'seconds'.
+%   'ts_syn_linmode' - method for estimating sampling rate. 'regress'
+%       performs a linear regression and should give lowest error, 'ends'
+%       linearizes from first to last observed timestamp. (default regress)
+%   'allowable_tserr_samps' - maximum allowable timestamp error, in # of
+%       samples (default 0.5).
 %
-%  'timestamp' = times in seconds
-%  'timestamp_ends' = time of first/last sample
-%  'data' = numeric data (m x n channels)
-%    -samplerate calcd from timestamps
-%    -'timeunits' defaults to 'seconds'
+% Output:
+%   c - cont struct with fields:
+%     'name' - string, cont functions often modify this.
+%     'data' - 2-D array of numeric data; 1 row per sample, 1 column per
+%         channel. All numeric datatypes supported, defaults to
+%         single-precision floating point.
+%     'chanlabels' - for multi-channel data, string labels for each column
+%     'chanvals' - for 2-D data, scalar values associated with each
+%         column (e.g. frequency at each bin for a spectrogram).
+%     'samplerate' - derived, not claimed (samples/second, double-precision)
+%     'tstart','tend' - time of first/last sample; in seconds.
+%     'datarange' - advisory limits of data -- useful for plotting, but
+%         not guaranteed to be real limits of data; in data units.
+%     'units' - descriptive string giving units of data.
+%     'nbad_start' and 'nbad_end' - samples at start/end of data that are
+%         unreliable due to filtering edge effects)
+%     'max_tserr' - maximum timestamp error introduced across entire signal
+%         by the conversion from 1 timestamp/sample, to a fixed
+%         samplerate.
 %
-%  Common options:
+% Example: Import a Neuralynx .csc file, downsampled to 1kHz
+%
+%   cd data/lfpdir
+%   csc = NlxLoadCSC('LFP1.ncs')
+%   cdat = imcont('neuralynxCSC', csc
+%
+% If you encounter out of memory errors, try loading in subsets of
+% channels, then merging the cont structs with contcombine.
   
-%  'invert' : Whether to invert the sign of the data. (default: true
-%             whenever 'eegfile', 'mwlIOeegfh', or 'eeg' struct is
-%             provided. false if only 'data'/'timestamp' provided.)
-%  'resample': resamples data (using 'resample' or 'decimate' as
-%              appropriate) by given factor (use 1/integer to decimate)
-%  'timewin': range of times to select (selected range will enclose request)
-%  'name': a name for the contstruct (default based on filename, chans)
-%  'convertdatafun' : defaults to '@single'; use [] to not convert
-%  'chanvals': for 2-d data, values associated with each column (slopes,
-%              e.g.) for plotting as images/surfs;
-%  'chanlabels': text labels for channels
-%  'dataunits': defaults to '' (attempts to convert to mV if possible)
-%  'timeunits': 'timestamps', 'microseconds' or 'seconds'; default depends on inputs
-%
-% output struct:
-%
-% $$$    -contdata struct:
-% $$$      -name
-% $$$      -data (anything numeric)
-% $$$      -chanvals (for 2-D data, values associated with each column)
-% $$$      -chanlabels (for 2-D data, labels for each column) cell array of strings
-% $$$      -samplerate (derived, not reported; in samples/second)
-% $$$      -tstart,tend (time of first/last sample; in seconds)
-% $$$      -datarange (advisory limits of data -- useful for plotting, but not guaranteed to be real limits of data)
-% $$$      -units (descriptive string)
-% $$$      -nbad_start and nbad_end: samples that are unreliable due to filtering
-% $$$
-% $$$      -[sourcefile/channel]
-% $$$      -[prefilt - analog filtering by amplifier]
-% $$$      -[filters{m} - actual filters applied (using filtfilt)]
-%
-% todo:
+% Tom Davidson <tjd@stanford.edu> 2003-2010
+  
+% TODO:
+% -more precise timewin (call contwin at end with particular options?)
 % -input checking before all the loading/parsing/resampling, to save user
 % hassle, esp chanvals and chanlabels
+% -handle calls to NlxLoadCSC, allow ncsfiles argument
 
-  mwl_ts_per_sec = 1e4; % 10000 timestamps/second
+  mwl_ts_per_sec = 1e4; % 10,000 timestamps/second
   
   a = struct(...
       'eegfile','',...
@@ -76,15 +113,15 @@ function c = imcont(varargin)
       'invert', [],...
       'resample', [],...
       'timewin', [],...
-      'eeg', {{}},...
       'neuralynxCSC', [],...
-      'ncsfiles', {{}},...
       'name', '',...
       'data', [],...
       'timestamp', [],...
       'timestamp_ends', [],...
       'timeunits', '',...
       'convertdatafun', @single,... 
+      'ts_syn_linmode', 'regress',...
+      'allowable_tserr_samps', 0.5,...
       'chanvals', [],...
       'chanlabels', {{}},...
       'dataunits', '' );
@@ -92,26 +129,15 @@ function c = imcont(varargin)
   a = parseArgsLite(varargin,a);
 
   if isempty(a.invert)
+    % by default, invert is true for MWL files
     invert = (~isempty(a.mwlIOeegfh) ||...
-              ~isempty(a.eegfile) ||...
-              ~isempty(a.eeg));
+              ~isempty(a.eegfile));
   else
     invert = a.invert;
   end
     
-  c = struct('name', [],...
-             'data', [],...
-             'chanvals', [],...
-             'chanlabels', [],...
-             'samplerate',[],...
-             'tstart',[], 'tend',[],...
-             'datarange',[],...
-             'units', '',...
-             'nbad_start',0,...
-             'nbad_end',0);
-
-  % pass through name, if given
-  c.name = a.name;
+  % call cont data constructor function
+  c = mkcdat('name', a.name);
   
   % string for default names of structs
   chanstr = '';
@@ -120,105 +146,134 @@ function c = imcont(varargin)
     chanstr = [chanstr int2str(a.chans(k))];
   end
   
-      
-  %%%%%%%%%%%%%%%%%%%%%
-  % 'eeg' struct from mwlIO
-  
-  % use eegfile, if provided
+
+  % Figure out what kind of inputs we're working with
+  mode = {};    
+
   eegfh = [];
   if ~isempty(a.eegfile),
     eegfh = mwlopen(a.eegfile);
+    mode = [mode {'mwleeg'}];
   elseif ~isempty(a.mwlIOeegfh),
     eegfh = a.mwlIOeegfh;
+    mode = [mode {'mwleeg'}];
+  end
+
+  if ~isempty(a.epos)
+    mode = [mode {'epos'}];
   end
   
-  if ~isempty(eegfh);
+  if ~isempty(a.neuralynxCSC),
+    mode = [mode {'nlxCSC'}];
+  end
+
+  if ~isempty(a.data) || ~isempty(a.timestamp),
+    mode = {'raw'};
+  end
+  
+  switch numel(mode)
+   case 0
+    error('You must provide data or a file to import');
+   case 1
+    % ok, 1 mode only
+   otherwise
+    modestr = strcat(mode, ',');
+    error('More than one data import mode implied by inputs: %s.', modestr(1:end-1));
+  end
+  
+  mode = mode{1};
+
+  %% Get c.data and timestamp data from any of the import modes, then do
+  %% generic processing below
+  switch mode
+
+   %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+   % Import Wilson lab .eeg file import using Fabian's mwlIO library
+   case 'mwleeg'
     
-    % come up with a default name
-    if isempty(a.name)
-      c.name = [eegfh.filename '_ch' chanstr];
+    if ~isempty(a.timeunits)
+      error(['Can''t provide timeunits for MWL eeg import--times always ' ...
+             'in MWL_timestamp units']);
     end
-    
-    timeunits = 'timestamps';
+    timeunits = 'MWL_timestamps';
 
     % # of datapts/timestamp
     recsize = eegfh.nsamples;
     nrecords = eegfh.nrecords;
     nchannels = eegfh.nchannels;
-        
-    if ~isempty(a.data) && ~isempty(a.timestamp);
-      if size(a.data,1) ~= (recsize * size(a.timestamp,1)),
-        error('data size inconsistent with timestamps/recordsize');
-      elseif size(a.data,2) ~= length(a.chans),
-        error('data must have same # of columns as ''chans'' entries');
-      end
-      
-      c.data = a.data;
-      timestamp = a.timestamp;
+
+    %% Load Timestamps, select buffers, and check for gaps
+    disp('Loading timestamps...');
+    % load actual timestamps, since there can be gaps
+    buff_ts = load(eegfh, 'timestamp');
+    buff_ts = buff_ts.timestamp;
+    buff_t = double(buff_ts) ./ mwl_ts_per_sec;
     
-    else % we have to load the data;
-      
-      disp('loading all channels...');
-      
-      if ~isempty(a.timewin),
-        % we are going to prune by timewin later, but this
-        % saves us from loading too much excess data.
-        
-        % get actual timestamps, since there can be gaps
-        buff_ts = load(eegfh, 'timestamp');
-        buff_ts = buff_ts.timestamp;
-        buff_t = double(buff_ts) ./ mwl_ts_per_sec;
-        
-        loadbuffs = {find(buff_t < a.timewin(1) , 1, 'last'),...
-                     find(buff_t > a.timewin(2) , 1, 'first')};
-        
-        if isempty(loadbuffs{1}),
-          loadbuffs{1} = 1;
-        end
-        
-        if isempty(loadbuffs{2}),
-          loadbuffs{2} = nrecords;
-        end
-        
-        loadbuffs = [loadbuffs{:}];
-        
-        if diff(loadbuffs) == 1;
-          % need at least 2 timestamps to calc samplerate, etc...
-          loadbuffs(2) = loadbuffs(1) + 1;
-        end
+    if ~isempty(a.timewin),
+      % we are going to prune by timewin later, but this
+      % saves us from loading too much excess data.
+      loadbuffs = {find(buff_t < a.timewin(1) , 1, 'last'),...
+                   find(buff_t > a.timewin(2) , 1, 'first')};
 
-        t_per_buff = recsize ./ samplerate_reported;
-        if max(diff(buff_t(loadbuffs(1):loadbuffs(2)))) > ...
-              (1.5 * t_per_buff),
-          warning('requested eeg range contains gaps (recording stopped?)'); %#ok
-        end
-
-        % load is zero-indexed 
-        loadbuffs = loadbuffs-1;
-        
-        cont_tmp = load(eegfh,'all', loadbuffs(1):loadbuffs(2));
-      else
-        cont_tmp = load(eegfh,'all', []);
+      if isempty(loadbuffs{1}),
+        loadbuffs{1} = 1;
       end
-      
-      disp('Done...');
-      
-      if ~isempty(a.convertdatafun) && ~strcmp(func2str(a.convertdatafun), class(a.data)),
-          disp(['converting to ' func2str(a.convertdatafun) '...']); % usu. single
-          % select appropriate channels, put in argsstruct
-          c.data = a.convertdatafun(cont_tmp.data(a.chans,:)');
-          disp('Done...');
+      if isempty(loadbuffs{2}),
+        loadbuffs{2} = nrecords;
       end
-      
-      timestamp = cont_tmp.timestamp(:);
-      clear cont_tmp;
-      
+      loadbuffs = [loadbuffs{:}];
+    else
+      loadbuffs = [1 nrecords];
     end
+
+    if diff(loadbuffs) == 1;
+      % need at least 2 timestamps to calc samplerate
+      loadbuffs(2) = loadbuffs(1) + 1;
+    end
+
+    % note this is samplerate according to the A->D card's clock, not the master
+    % computer's clock. OK for our purposes here, though.
+    samplerate_reported = str2double(eegfh.header(2).rate)./nchannels;
+    t_per_buff = recsize ./ samplerate_reported;
+    if max(diff(buff_t(loadbuffs(1):loadbuffs(2)))) > ...
+          (1.1 * t_per_buff),
+      warning('Requested eeg range contains gaps (recording stopped?)'); %#ok
+    end
+    
+    disp('Done...');
+
+    %% Load in data
+    disp('Loading data...')
+    loadbuffs = loadbuffs-1; % 'load' is zero-indexed 
+    cont_tmp = load(eegfh,'all', loadbuffs(1):loadbuffs(2));
+    
+    % select requested channels (data in rows)
+    if ~isempty(a.chans)
+      c.data = cont_tmp.data(a.chans,:)';
+    else
+      c.data = cont_tmp.data(:,:)';
+    end
+
+    timestamp = cont_tmp.timestamp(:);
+    clear cont_tmp;
+
+    disp('Done...');
+    
+    % Change datatype before converting units since mwlopen returns
+    % int16s, which underrun when converted to mV 
+    if ~isempty(a.convertdatafun) && ~strcmp(func2str(a.convertdatafun), class(c.data)),
+      disp(['converting to ' func2str(a.convertdatafun) '...']); % usu. single
+      
+      % select appropriate channels, put in argsstruct
+      c.data = a.convertdatafun(c.data);
+      disp('Done...');
+    end
+
+    % OK, can convert units now
     
     if ~isempty(a.dataunits)
       c.units = a.dataunits;
     else
-      
       % it's in ADCunits; convert to mV;
       gains = getHeaderGains(eegfh);
       gains = gains(a.chans);
@@ -237,63 +292,21 @@ function c = imcont(varargin)
         c.data(:,k) = c.data(:,k) .* adunits_to_mv_f(k);
       end
       
-      % use full range of AD card as data range
+      % report full range of AD card as data range
       c.datarange = [-2048 .* adunits_to_mv_f(k),...
-                     -2047 .* adunits_to_mv_f(k)];
-      c.units = 'mv';
-    end
-    
-    
-  %%%%%%%%%%%%%%%%%%%%%
-  % struct from eeg2mat
-  
-  elseif ~isempty(a.eeg), % struct from 'eeg2mat'
-    
-    % come up with a default name
-    if isempty(a.name)
-      c.name = [a.eeg.info.filename '_ch' chanstr];
-    end
-
-    % eeg struct as input
-    timestamp = a.eeg.timestamp;
-    timeunits = 'seconds';
-
-    % # of datapts/timestamp
-    recsize = 1; 
-    
-    if strcmp(a.eeg.info.units, 'ADC');
-      %convert to mV
+                      2047 .* adunits_to_mv_f(k)];
       c.units = 'mV';
-      
-      % a vector of conversion factors per channel
-      adunits_to_mv_f = ...
-          1/diff(a.eeg.info.ADCrange) .* ... % ADCrange/ADCUnits (-2048 -> +2047)
-          diff(a.eeg.info.inputrange) .* ... % ADCvolts/ADCrange (-10 -> +10)
-          1/a.eeg.info.gain .* ... % volts/ADCvolts (vector)
-          1000; % mv/volt
-          
-      for k = 1:length(a.eeg.info.gain);
-        c.data(:,k) = a.eeg.data(:,k) .* adunits_to_mv_f(k);
-      end
-      
-      c.datarange = [a.eeg.info.ADCrange(1) .* adunits_to_mv_f(k),...
-                     a.eeg.info.ADCrange(2) .* adunits_to_mv_f(k)];
-
-      % old code for this line:
-% $$$       % good enough: if inputrange doesn't span 0, and there are
-% $$$       % different gains, this could be wrong, but who cares?
-% $$$       c.datarange = a.eeg.info.ADCrange .* max(adunits_to_mv_f);
-      
-
-      
-    else
-      c.data = a.eeg.data;
-      c.datarange = a.eeg.info.ADCrange;
     end
     
-    %%%%%%%%%%%%%%%%%%%%%
-    % e.pos struct
-  elseif ~isempty(a.epos),
+    % come up with a default cont struct name
+    if isempty(c.name)
+      c.name = [eegfh.filename '_ch' chanstr];
+    end
+
+    
+   %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+   % Import e.pos struct from Tom's expt struct    
+   case 'epos'
     
     recsize = 1;
     
@@ -316,58 +329,62 @@ function c = imcont(varargin)
       timeunits = a.timeunits;
     end
 
-  %%%%%%%%%%%%%%%%%%%%%
-  % neuralynx CSC data as imported by Tom's NlxLoadCSC.m
-  elseif ~isempty(a.neuralynxCSC)
-      
-      if ~isempty(a.chanlabels),
-          cl = a.chanlabels;
-      else
-          cl = a.neuralynxCSC.info.header.AcqEntName;
-      end
-      
-      %% Error if user tries to pass in data already provided by the struct
-      if ~isempty(a.dataunits),
-          error('Data units already specified in neuralynxCSC struct.');
-      end
-
-      if ~isempty(a.data),
-          error('Data already specified in neuralynxCSC struct.');
-      end
-      
-      if ~isempty(a.timestamp) || ~isempty(a.timestamp_ends) || ~isempty(a.timeunits),
-          error('Time (with units) already specified in neuralynxCSC struct.');
-      end
-
-      if ~isempty(a.invert)
-          error('Data invert status already specified in neuralynxCSC struct.');
-      end
-
-      
-      %% All other parameters are passed through to the next imcont call
-      
-      % call imcont recursively with raw timestamps/data
-      c = imcont(...
-          'timestamp', a.neuralynxCSC.samptimes, ...
-          'data', a.neuralynxCSC.samples, ...
-          'invert', a.neuralynxCSC.info.header.InputInverted, ...
-          'chanlabels', cl,...
-          ...
-          'chans', a.chans,...
-          'resample', a.resample,...
-          'timewin', a.timewin,...
-          'name', a.name,...
-          'chanvals', a.chanvals);
-      
-      % save Neuralynx-specific info
-      c.nlx_info = a.neuralynxCSC.info;
-
-      return;
+    c.units = a.dataunits;
     
-  %%%%%%%%%%%%%%%%%%%%%
-  % raw data/timestamp provided by user
-  
-  else % non-struct inputs (raw 'timestamp'/'data')
+   %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+   % Import Neuralynx CSC data struct (as created by Tom's NlxLoadCSC.m)
+   case 'nlxCSC'
+    
+    if ~isempty(a.chanlabels),
+      cl = a.chanlabels;
+    else
+      cl = a.neuralynxCSC.info.header.AcqEntName;
+    end
+    
+    %% Error if user tries to pass in data already provided by the struct
+    if ~isempty(a.dataunits),
+      error('Data units already specified in neuralynxCSC struct.');
+    end
+
+    if ~isempty(a.data),
+      error('Data already specified in neuralynxCSC struct.');
+    end
+    
+    if ~isempty(a.timestamp) || ~isempty(a.timestamp_ends) || ~isempty(a.timeunits),
+      error('Time (with units) already specified in neuralynxCSC struct.');
+    end
+
+    if ~isempty(a.invert)
+      error('Data invert status already specified in neuralynxCSC struct.');
+    end
+
+    %% All other parameters are passed through as-is to the next imcont call
+
+    % call imcont recursively with raw timestamps/data options
+    c = imcont(...
+        'timestamp', a.neuralynxCSC.samptimes, ...
+        'data', a.neuralynxCSC.samples, ...
+        'invert', a.neuralynxCSC.info.header.InputInverted, ...
+        'chanlabels', cl,...
+        ...
+        'chans', a.chans,...
+        'resample', a.resample,...
+        'timewin', a.timewin,...
+        'name', a.name,...
+        'chanvals', a.chanvals,...
+        'convertdatafun', a.convertdatafun,... 
+        'ts_syn_linmode', a.ts_syn_linmode,...
+        'allowable_tserr_samps', a.allowable_tserr_samps);
+
+    % save Neuralynx-specific info
+    c.nlx_info = a.neuralynxCSC.info;
+
+    % Don't do additional processing--it was done in call out to imcont
+    return;
+
+   %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+   % Import raw data/timestamp lists
+   case 'raw'
     
     recsize = 1;
     
@@ -378,24 +395,27 @@ function c = imcont(varargin)
     c.data = a.data;
     c.units = a.dataunits;
 
-    
+    % default to seconds
+    if ~isempty(a.timeunits)
+      timeunits = a.timeunits;
+    else
+      timeunits = 'seconds';
+    end
+
     if ~isempty(a.timestamp),
       timestamp = a.timestamp(:);
-      timeunits = 'seconds';
     elseif ~isempty(a.timestamp_ends);
       timestamp = linspace(a.timestamp_ends(1), a.timestamp_ends(2), ...
                            size(c.data,1))';
-      timeunits = 'seconds';
     else
-      timestamp = (1:size(c.data,1))';
-      timeunits = 'timestamps';
-      warning('no timestamps provided; using integer series');
+      error('No time information provided; can''t create cont struct.');
     end
   end
   
-  %%%%%%%%%%%%%%%%%%%%
-  % common to all inputs
   
+  %% Common processing for all input modes
+  
+  % check reported data size consistency
   if size(c.data,1) ~= (recsize * size(timestamp,1)),
     error('data size inconsistent with timestamps/recordsize');
   elseif ~isempty(a.chans) && (size(c.data,2) ~= length(a.chans)),
@@ -403,16 +423,6 @@ function c = imcont(varargin)
   end
   
   [nsamps ncols] = size(c.data); %#ok
-  
-  % invert sign of data if required
-  if invert,
-    c.data = -c.data;
-  end
-  
-  % user override of timestamp unitis 
-  if ~isempty(a.timeunits);
-    timeunits = a.timeunits;
-  end
   
   %%% convert timestamps to seconds, if nec.
   switch timeunits
@@ -426,9 +436,9 @@ function c = imcont(varargin)
       case 'microseconds'
           timestamp = double(timestamp) ./ 1e6;
 
-      case 'timestamps'
+      case 'MWL_timestamps'
           timestamp = double(timestamp) ./ mwl_ts_per_sec;
-
+          
       otherwise
           error('unrecognized ''timeunits'' string');
   end
@@ -454,78 +464,103 @@ function c = imcont(varargin)
   
   %%% calculate samplerate
   
-  % IMPORTANT: computed, not reported samplerate, so that we can
-  % synthesize new timestamps that sync up with other timestamp-locked
-  % events (like spikes): elapsed sample periods / elapsed time  
+  %  To save memory and simplify filtering operations, cont structs do not
+  % store a timestamp for each data point. Instead, we precisely store the
+  % time of the first/last sample and assume even sampling. If the data
+  % is not perfectly uniformly sampled, then this procedure introduces
+  % timing errors. In the data we analyze, these are due to slight drift
+  % between the clock used to drive sampling of our signal, and a master
+  % 'timestamp' clock (which is also used to synchronize other systems,
+  % such as video recording, digital events, sampling across multiple
+  % computers, etc). Both MWL's AD and Neuralynx's Cheetah take this
+  % approach.
 
-  %%% crop data to timewin, if requested
-  %%% (if from eeg file, already cropped on load)
-  if isempty(eegfh) && ~isempty(a.timewin);
+  %  Put another way, we replace (or model) the observed timestamps with a
+  %  linear fit. The errors are usually very small, but before discarding the
+  %  true timestamps, we calculate the maximum error introduced by our
+  %  model, and save this as a 'worst-case' timing error.
+
+  %% crop data to timewin before synthesizing timestamps so we don't try
+  %% to fit error unnecessarily
+
+  % (if from MWL eeg file, already mostly cropped on load)
+  if ~strcmp(mode, 'mwleeg') && ~isempty(a.timewin);
  
-    % time of first data pt
-    sampstart = find(timestamp<a.timewin(1),1,'last');
-    if ~isempty(sampstart)
-      samprange(1) = sampstart;
-    else
-      samprange(1) = 1;
+    % get indexes of selected first and last records
+    tsi_range{1} = find(timestamp<a.timewin(1),1,'last');
+    if isempty(tsi_range{1})
+      tsi_range{1} = 1;
     end
 
-    sampend = find(timestamp>a.timewin(2),1,'first');
-    if ~isempty(sampend)
-      samprange(2) = sampend;
-    else
-      samprange(2) = size(timestamp,1);
+    tsi_range{2} = find(timestamp>a.timewin(2),1,'first');
+    if isempty(tsi_range{2})
+      tsi_range{2} = size(timestamp,1);
     end
-        
-    samprange = max(1, samprange);
-    samprange = min(size(c.data,1), samprange);
-    
-    c.tstart = timestamp(samprange(1));
-    c.tend = timestamp(samprange(2));
-    
-    % # of sample periods elapsed / time elapsed
-    c.samplerate = diff(samprange)*recsize / (c.tend-c.tstart);
-    
-    % crop data/timestamp
-    c.data = c.data(samprange(1):samprange(2),:);
-    timestamp = timestamp(samprange(1):samprange(2));
-    
-    % test/warn timewin
-    if c.tstart > a.timewin(1) || c.tend < a.timewin(2),
-      warning('requested timewin out of data range, used available data');
-    end
-  
+    tsi_range = [tsi_range{:}];
+
   else
-    
-    % # of sample periods elapsed / time elapsed
-    c.samplerate = (size(timestamp,1)-1)*recsize / diff(timestamp([1 end]));
-    
-    % time of first data pt
-    c.tstart = timestamp(1);
-    
-    % time of last data pt
-    c.tend = timestamp(end) + (recsize-1)/c.samplerate;
+    % select all records
+    tsi_range = [1 numel(timestamp)];
   end
   
+  % timestamps of first and last selected records to use
+  ts_range = timestamp(tsi_range);
+
+  % crop to selected data & timestamps
+  timestamp = timestamp(tsi_range(1):tsi_range(2));
+
+  samprange = ((tsi_range-1)*recsize)+1;
+  c.data = c.data(samprange(1):samprange(2),:);
   
-  %%% calculate max error between computed/exact timestamps
-  %
-  % compare actual timestamps to 'synthetic' even sampling
-  %
-  % [could be more memory efficient using a cumsum of real ts and a
-  % counter for real ts, but !whatever!]
-  ts_syn = c.tstart:(recsize/c.samplerate):c.tend;
-  c.max_tserr = max(abs(timestamp(:) - ts_syn(:)));
+  %%% try to catch large gaps in data (without knowing the samplerate)
+  dts = diff(timestamp);
+  gapi = find (dts > 1.5*median(dts));
+  if ~isempty(gapi)
+    warning('Timestamp data appears to have gaps: after indexes [%s] (times [%s])',...
+            num2str(gapi), num2str(timestamp(gapi)));
+  end
   
-  % there's no reason the error shouldn't be 0, but 50% of a sample is a
-  % natural cutoff/confidence interval. Note that this error is the max of
-  % what the synthesizing of the timestamps **adds** to the timing
-  % uncertainty already in the signal.(for eeg, this should be only 0.5
-  % of a *timestamp interval* = 50usec), so really no biggie.
+  %%% calculate linear fit 'synthetic timestamps'
+  switch lower(a.ts_syn_linmode)
+   case 'regress'
+    % find best fit to real timestamps by linear regression
+    numts = numel(timestamp);
+    tsb = regress(timestamp(:), [ones(numts,1) (1:numts)']);
+
+    % synthesize timestamps from slope/offset
+    ts_syn = tsb(1) + (1:numts)'*tsb(2);
+    
+   case 'ends'
+
+    % linear spacing between first/last timestamp
+    ts_syn = linspace(timestamp(1), timestamp(end), numel(timestamp))';
+
+   otherwise
+    error('Unrecognized ''ts_syn_linmode'': try ''regress'' ''ends''.');
   
-  if c.max_tserr > 0.5*(1/c.samplerate),
-    warning('imcont:ts_error', ['max error in computed timestamp will be greater than 50% of ' ...
-             'samplerate resolution!!!--try converting as subsets of data?']);
+  end
+
+  % calculate samplerate, start/end times from ts_syn
+  
+  % # of sample periods elapsed / time elapsed
+  c.samplerate = (size(ts_syn,1)-1)*recsize / diff(ts_syn([1 end]));
+
+  c.tstart = ts_syn(1);
+  c.tend = ts_syn(end)+(recsize-1)/c.samplerate;
+  
+  % calculate largest timing error introduced by our linearization procedure
+  [c.max_tserr] = max(abs(timestamp(:) - ts_syn(:)));
+  if c.max_tserr > a.allowable_tserr_samps*(1/c.samplerate),
+    error(['max error in computed timestamp (%3.3f ms) will be greater than %.1f%% of ' ...
+           'sampling resolution (%3.3f ms) !!!--adjust ''allowable_tserr_samps'' or '...
+           'try converting as subsets of data.'],...
+          c.max_tserr*1000, a.allowable_tserr_samps*100, 1/c.samplerate*1000);
+  end
+
+  %%% convert datatype before manipulating data
+  if ~isempty(a.convertdatafun) && ~strcmp(func2str(a.convertdatafun), class(c.data)),
+    disp(['converting to ' func2str(a.convertdatafun) '...']); % usu. single
+    c.data = a.convertdatafun(c.data);
   end
   
   %%% resample, if requested
@@ -535,14 +570,30 @@ function c = imcont(varargin)
     c = contresamp(c,'resample',a.resample);
     disp('Done...');
   end
-    
-    
-  %%% useful when plotting; nice to precompute, even though it's slow
-  c = contdatarange(c);
-  
-  %%% convert datatype last-ish
-  if ~isempty(a.convertdatafun) && ~strcmp(func2str(a.convertdatafun), class(a.data)),
-      disp(['converting to ' func2str(a.convertdatafun) '...']); % usu. single
-    c.data = a.convertdatafun(c.data);
+      
+  %%% invert sign of data if required
+  if invert,
+    c.data = -c.data;
   end
+
+  %%% trim time more prettily (by sample now, rather than by record)
+  if ~isempty(a.timewin)
+    tw = a.timewin
+    if tw(1)<c.tstart
+      warning('Requested start time (%.3f s) out of range, using data limits (%.3f s)',...
+              tw(1),c.tstart);
+      tw(1) = c.tstart;
+    end
+
+    if tw(2)>c.tend
+      warning('Requested end time (%.3f s) out of range, using data limits (%.3f s)',...
+              tw(2),c.tend);
+      tw(2) = c.tend;
+    end
+
+    c = contwin(c, tw, 'samps_bracket');
+  end
+  
+  %%% update data range
+  c = contdatarange(c);
   
