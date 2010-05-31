@@ -485,8 +485,10 @@ function c = imcont(varargin)
   %% to fit error unnecessarily
 
   % (if from MWL eeg file, already mostly cropped on load)
-  if ~strcmp(mode, 'mwleeg') && ~isempty(a.timewin);
- 
+  if strcmp(mode, 'mwleeg') || isempty(a.timewin);
+    % select all records
+    tsi_range = [1 numel(timestamp)];
+  else 
     % get indexes of selected first and last records
     tsi_range{1} = find(timestamp<a.timewin(1),1,'last');
     if isempty(tsi_range{1})
@@ -498,19 +500,16 @@ function c = imcont(varargin)
       tsi_range{2} = size(timestamp,1);
     end
     tsi_range = [tsi_range{:}];
-
-  else
-    % select all records
-    tsi_range = [1 numel(timestamp)];
   end
   
   % timestamps of first and last selected records to use
   ts_range = timestamp(tsi_range);
+  % index into corresponding samples
+  samprange = [((tsi_range(1)-1)*recsize)+1 ... % end of prev record + 1
+               tsi_range(2)*recsize]; % end of last record
 
   % crop to selected data & timestamps
   timestamp = timestamp(tsi_range(1):tsi_range(2));
-
-  samprange = ((tsi_range-1)*recsize)+1;
   c.data = c.data(samprange(1):samprange(2),:);
   
   %%% try to catch large gaps in data (without knowing the samplerate)
