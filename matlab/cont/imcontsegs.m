@@ -22,15 +22,23 @@ function c = imcontsegs(varargin)
       'rowdata', false,... % data in rows
       'samplerate', [],... 
       'alignok', false,... % suppress align warning?
-      'name', '',... % cdat name
-      'units', '',...
-      'chanvals', [],...
+      'padvalue', NaN,... % value for unassigned data points
+      'name', '',... % new cdat name
+      'units', '',... % data units
+      'chanvals', [],... 
       'chanlabels', {{}},...
-      'dataunits', '' ,...
       'datatype', 'single'); % warning: may be converted to double at
                              % various points in filtering, etc...
   
   a = parseArgsLite(varargin,a);
+  
+  if ~isscalar(a.padvalue)
+    error('''padvalue'' must be a scalar');
+  end
+
+  if numel(a.data) ~= numel(a.starts_t)
+    error('Must provide same # of seg starts and data chunks');
+  end
   
   c = mkcdat('name', a.name,...
              'chanvals', a.chanvals,...
@@ -47,10 +55,7 @@ function c = imcontsegs(varargin)
     nchans = size(a.data{1},1);
   end
   
-  if numel(a.data) ~= numel(a.starts_t)
-    error('Must provide same # of seg starts and data chunks');
-  end
-
+  % sort segs/times if not already sorted
   if ~issorted(a.starts_t)
     [a.starts_t sorti] = sort(a.starts_t);
     a.data = a.data(sorti);
@@ -73,16 +78,30 @@ function c = imcontsegs(varargin)
     warning(['start times rounded > 1% of sample period, largest align = ' ...
              num2str(max(abs(aligns_t(:)))*1000) ' ms']);
   end
-  startsi = round(startsi);
-  
+
+  % pre-allocate with requested 'padvalue'
+  c.data = repmat(a.padvalue, ceil(diff(a.timewin)*a.samplerate), nchans);
+
+  % fill cont struct with data segments
+  endi = 0;
   for k = 1:nsegs
+
+    % check for overlap
+    if startsi(k)<endi,
+      error('overlapping segments provided');
+    end
+
     if a.rowdata
       a.data{k} = a.data{k}';
     end
-    dat(startsi(k):(startsi(k)+size(a.data{k},1)-1),:) = a.data{k};
+
+    % write this seg to c.data
+    endi = startsi(k)+size(a.data{k},1)-1;
+    c.data(startsi(k):endi,:) = a.data{k};
+  
   end
   
-  c.data = dat;
+  % clean up construct
   c.tstart = a.timewin(1);
   c.tend = c.tstart+(size(dat,1)-1)/a.samplerate;
   
