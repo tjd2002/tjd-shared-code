@@ -1,6 +1,18 @@
 function [lindex time_ind_val] = contlocalmax(cont)
-% CONTLOCALMAX apply localmax to each channel of a contdata struct,
-% return times of peaks
+% CONTLOCALMAX find local maxima of each channel of a contdata struct,
+%
+%   [lindex time_ind_val] = contlocalmax(c)
+% 
+% Inputs:
+%  c - cont struct
+%
+% Outputs:
+%  lindex - logical array index into c.data, true at each peak (see: localmax.m)
+%  time_ind_val - cell array of m x 3 matrices, 1 per channel, with one
+%      row per peak found, containing the peak time, the index of the peak,
+%      and the value at the peak.
+
+% Tom Davidson <tjd@stanford.edu> 2003-2010
   
   [lindex ind_val] = localmax(cont.data);
   

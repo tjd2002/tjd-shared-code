@@ -1,10 +1,10 @@
 function [pks_t] = contpeaks(c, varargin)
 % CONTPEAKS - find times of peaks, valleys, or zero-crossings
 %
-% [peaks] = contbouts(cont, [param/value pairs]
+% peaks_t = contpeaks(c, [name/value pairs]
 %
 % Args:
-%  cont = cont structure (or any structure with a 'data' field and optionally a
+%  c - cont structure (or any structure with a 'data' field and optionally a
 %       'samplerate' field for args in seconds)
 %  'type' - 'peaks', 'valleys', 'extrema' (default: peaks)
 %
@@ -14,9 +14,10 @@ function [pks_t] = contpeaks(c, varargin)
 %
 %  'segs' - only return peaks in specified time segments
 %
-%  returns a cell array of times, one cell per channel
-%
-%  $Id: contpeaks.m 2213 2009-08-03 19:38:21Z tjd $
+% Outputs:
+%  peaks_t -  cell array of peak times, one cell per channel
+
+% Tom Davidson <tjd@stanford.edu> 2003-2010
   
 
   %%%% input argument parsing/checking

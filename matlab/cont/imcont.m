@@ -89,11 +89,12 @@ function [c timestamp ts_syn] = imcont(varargin)
 %         samplerate.
 %     'mean_tserr' - mean timestamp error, or mean temporal bias.
 %
-% Example: Import a Neuralynx .csc file, downsampled to 1kHz
+% Example: Import a Neuralynx .csc file, downsample to exactly 1kHz
 %
 %   cd data/lfpdir
 %   csc = NlxLoadCSC('LFP1.ncs')
-%   cdat = imcont('neuralynxCSC', csc
+%   cdat = imcont('neuralynxCSC', csc);
+%   cdat = continterp(cdat, 'samplerate', 1000);
 %
 % If you encounter out of memory errors, try loading in subsets of
 % channels, then merging the cont structs with contcombine.
@@ -101,10 +102,9 @@ function [c timestamp ts_syn] = imcont(varargin)
 % Tom Davidson <tjd@stanford.edu> 2003-2010
   
 % TODO:
-% -more precise timewin (call contwin at end with particular options?)
 % -input checking before all the loading/parsing/resampling, to save user
-% hassle, esp chanvals and chanlabels
-% -handle calls to NlxLoadCSC, allow ncsfiles argument
+% debugging time, esp chanvals and chanlabels
+% -handle calls to NlxLoadCSC, allow 'ncsfiles' argument
 
   mwl_ts_per_sec = 1e4; % 10,000 timestamps/second
   

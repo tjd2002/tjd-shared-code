@@ -3,15 +3,19 @@ function [vals] = contlookup(c, varargin)
 %
 % [vals] = contlookup(c, [name/value pair args]
 %
-% Args:
-%  cont = cont structure
-%  'xt': times to lookup
-%  'method': interpolation method. args as for interp1, default is
-%            'nearest', i.e. no interpolation), try 'linear'.
-%  'extrap': default=Nan , or use any numerical value, or 'extrap' to
-%            allow for extrapolation.
-
-
+% Inputs:
+%  c - cont structure
+%  'xt' - times to lookup
+%  'method' -  interpolation method. args as for interp1, (default is
+%      'nearest', i.e. no interpolation), try 'linear'.
+%  'extrap' -  default=Nan , or use any scalar value, or 'extrap' to
+%      allow for extrapolation.
+%
+% Outputs:
+%  vals - values at requested times
+  
+% Tom Davidson <tjd@stanford.edu> 2003-2010
+  
 %%%% input argument parsing/checking
 
   a = struct (...

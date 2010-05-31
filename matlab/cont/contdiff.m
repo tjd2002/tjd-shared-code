@@ -1,5 +1,17 @@
 function c = contdiff(c, varargin)
-% CONTDIFF take the diff of the signal
+% CONTDIFF take the diff (derivative) of the signal in a cont struct
+% 
+%  cout = contdiff(cont, [name/value pairs])
+%
+% Inputs:
+%  'N', take the nth-order derivative (default 1)
+%  'name', name for the new cont struct (default: [oldname '_dx' N])
+%
+% Example:
+% 
+%    cdat_fr = contdiff(cdat);
+
+% Tom Davidson <tjd@alum.mit.edu> 2003-2010
   
   a = struct(...
       'N', 1,...
@@ -14,7 +26,7 @@ function c = contdiff(c, varargin)
   c = contdatarange(c);
   
   if a.N > 1, 
-    derstr = ['_d' num2str(a.N) 'x'];
+    derstr = ['_dx' num2str(a.N)];
   else
     derstr = '_dx';
   end

@@ -1,5 +1,13 @@
 function c = mkcdat(varargin)
-%MKCDAT make a new cdat struct (constructor)
+%MKCDAT make a new cont struct (constructor)
+%
+%  Private helper function called by imcont* functions  
+%
+%  Note name is cdat due to conflict with obj/cont cont objects. This
+%  should get resolved, when functionality of cont objects and cont
+%  structs is merged. For now it's just cosmetic. :)
+
+% Tom Davidson <tjd@stanford.edu> 2003-2010
   
   c = struct('name', [],...
              'data', [],...
@@ -24,7 +32,7 @@ function c = mkcdat(varargin)
     end
     [nsamps nchans] = size(c.data);
     if nchans>nsamps,
-      warning('more samps than channels, is data transposed?');
+      warning('More samples than channels, is data transposed?');
     end
   end
   

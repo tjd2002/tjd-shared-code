@@ -1,6 +1,38 @@
 function c = contenv (c,varargin)
-% CONTENV get the signal envelope
-  
+% CONTENV - Compute instantaneous amplitude for data in a cont struct
+%
+%    cout = contenv(c, [name/value pair args]);
+%
+% Calculates the instantaneous magnitude (or ENVelope) of a signal, by one of
+% several methods (see code for details of algorithms):
+%
+%  -'peaks' rectifies the signal, and performs linear interpolation across
+%   the peaks of the resulting--closest to an envelope.
+%  -'hilbert' calculates the magnitude of the analytic signal, which is
+%   equal to the amplitude envelope for narrow bandwidth signals
+%   (e.g. those which have been bandpass filtered in a narrow
+%   range). ('hilbert_complex' returns the complex, analytic signal instead
+%   of the envelope)
+%  -'rms' calculates the root-mean-square amplitude, smoothed with a
+%   sliding boxcar/rectangular filter. 
+%
+% Inputs: (* means required, -> indicates default value)
+%  * c - input cont struct 
+%   'method' - method to use to compute envelope.
+%       (->'peaks', 'hilbert', 'hilbert_complex', 'rms')
+%   'rms_window_t' - time to average if using the 'rms' method (no default)
+%
+%  Infrequently-used options
+%   'envopt' - envelope options structure as created by mkenvopt
+%
+% Outputs:
+%  cout - cont struct with the envelope
+%
+% Example:
+%  cout = contenv(cdat, 'method', 
+%
+% Tom Davidson <tjd@alum.mit.edu> 2003-2010 
+
   a = struct(...
       'envopt',[],...
       'method',[],...
@@ -23,7 +55,7 @@ function c = contenv (c,varargin)
   
   [nsamps nchans] = size(c.data); %#ok
   
-  disp('calculating envelope...');
+  disp('calculating...');
 
   switch(a.envopt.method)
    case 'hilbert'

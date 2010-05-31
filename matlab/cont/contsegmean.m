@@ -1,12 +1,44 @@
 function [stat] = contsegmean(c, varargin)
 % CONTSEGMEAN measure mean/std/s.e.m. in windows during segments
+%  [stat] = contsegmean(c, varargin)
+%
+% ***EXPERIMENTAL CODE*** 
 %
 % Since the neighboring samples in biological time series are often
 % correlated (that is, not independent), it is difficult to get an estimate
 % of the variance of the mean. 
 % 
 % We overcome this by only making measurements at intervals that are
-% expected to be independent. 
+% expected to be independent, for the phenomenon under study. The code
+% currently selects times to sample the mean randomly, rather than at a
+% minimum interval. Not sure this is correct
+%
+% *If segments not provided, must provide meas_count or meas_interval
+%
+% *If meas_count and meas_interval not provided, we take mean from 1 sample
+% in middle of each segment
+%  
+% *Only 1 of meas_count and meas_interval can be provided
+%
+% Inputs: * = required
+%  *c - cont struct
+%  *'meas_dur' - window of time used for each mean measurement
+%  'segments' - limit analysis to subsets of data in c
+%  'meas_count' - how many samples to take
+%  'meas_interval' - mean measurement interval
+%
+% Outputs: 
+%  stat - struct with named fields (all 1 column per channel)
+%    .segmeans - means calculated 
+%    .mean- overall mean 
+%    .std - std deviation of segmeans 
+%    .se - std error of segmeans
+%    .n - number of segmeans
+%
+% TODO:
+%  -enforce minimum interval?
+
+% Tom Davidson <tjd@stanford.edu> 2003-2010
   
   a = struct(...
       'segments', [],...
@@ -20,21 +52,17 @@ function [stat] = contsegmean(c, varargin)
   
   switch sum([~isempty(a.meas_count) ~isempty(a.meas_interval)])
    case 0
-
-    % we will use the central 'meas_dur' in each segment
+    % no meas_count or meas_interval: we will use the central 'meas_dur' in each
+    % segment
     if isempty(a.segments),
       error('Must provide ''segments'' list');
     end
-
     if size(a.segments,2) ~= 2,
       error('''segments'' must be an m x 2 array of times');
     end
-
    case 1,
     % ok!
-    
    case 2,
-    
     error(['only one of ''meas_count'' and ''meas_interval'' can be ' ...
            'provided']);
   
@@ -61,7 +89,7 @@ function [stat] = contsegmean(c, varargin)
     % shorter segments)
     
     CDFi = [0; cumsum(segdurs-a.meas_dur)]; % subtract dur, since we can't start any
-                                      % closer than that to the end of each seg.
+                                            % closer than that to the end of each seg.
     CDFmax = CDFi(end);
     randt = rand(a.meas_count,1)*CDFmax;
     

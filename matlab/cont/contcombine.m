@@ -1,27 +1,54 @@
 function c = contcombine(c, cadd, varargin)
-% CONTCOMBINE - combine several cont structures, interpolating data
+% CONTCOMBINE - combine several cont structures, interpolating as needed
 %
-% default is to resample and interpolate the cdat structs in 'cadd' so
-% that they match 'c', but a new 'timewin'/'nsamps'/'samplerate' can also
-% be provided. 
+%  cout = contcombine(c, cadd, [name/value pairs])
 %
-% 'interp_method' is passed through to continterp
+% Combines cont structs that overlap in time, but may have different
+% sampling times, into a single multi-channel cont struct. Resamples and
+% interpolates signals so that all channels have same sampling rate and
+% sample times.
 %
-% 'matchfirst' specifies that the samples in the first cdat 'c' will be
-% used as-is (new timewin can still be specified) with no interpolation
+% Default behavior is to resample and interpolate the cont structs in 'cadd'
+% so that they match 'c', but a new time basis can also be provided for the
+% output cont struct using 'timewin', 'samplerate', and 'nsamps' arguments.
 %
-% 'resampbeforeinterpk' controls whether the initial samplerate matching
-% interpolation is done before interpolating. When a signal contains
-% short stretches of data surrounded by NaNs, this can reduce the edge
-% effects caused by interpolation (even with interp methods like
-% 'linear'). (Note that for 'nearest' interpolation, resampbeforeinterp
-% is always false). Cf. continterp.
-  
+% Inputs: (* means required, -> indicates default value)
+%   * c - a cont struct to which the others are added
+%   * cadd - the cont struct or structs (in a cell array) to be combined
+%       with c.
+%   'timewin' - requested time range for cout. Actual time range will be the
+%       overlap of timewin and the times of all provided structs (default
+%       is to use largest overlapping time window across structs).
+%   'samplerate'/'nsamps' - requested sampling frequency (Hz) or number
+%       of samples for cout. Only one can be provided (default is to
+%       use samplerate from c).
+%   'interp_method' is the interp1 method that is passed to continterp
+%       (->'cubic', 'spline', 'linear', 'nearest', etc)
+%   'matchfirst' specifies that the sample times in the first cdat 'c' will be
+%       used as-is (new timewin can still be specified). Useful to
+%       enforce no interpolation on c. (true,->false)
+%
+%   Infrequently-used options:
+%   'resampbeforeinterpk': (see continterp) controls whether to run an
+%       antialiasing filter before resampling. Usually this is a *good
+%       idea*, so default is true. Can also be an vector of logicals,
+%       with 1 value per cont struct.
+%   
+% Outputs:
+%   cout - the resulting cont struct
+%
+% Example:
+%  Combine and resample several LFP channels that have been imported separately
+%
+%    cdat_lfp = contcombine(cdat_lfp1, {cdat_lfp2 cdat_lfp3}, 'samplerate', 1500)
+
+%  Tom Davidson <tjd@alum.mit.edu> 2003-2010 
+
   a = struct('timewin', [],...
+             'match_first', false,...             
              'nsamps', [],...
              'samplerate', [],...
              'resampbeforeinterpk', true,...
-             'match_first', false,...
              'interp_method', 'cubic');
   
   a = parseArgsLite(varargin,a);

@@ -1,10 +1,19 @@
 function c = contoperator(c1, c2, varargin)
-% CONTOPERATOR apply an operator to equal-sized cdats
+% CONTOPERATOR apply an operator to the data in 2 equal-sized cdats
 %
-% 'op': operator
-%        fnhandle or string of any operator that is valid on the data
-% 'name': new name for cdat
-% 'infix': string to place between channel names in new channel
+%   cout = contoperator(c1, c2, varargin)
+%
+% Inputs:
+%  c1, c2 - cont structs with equal-sized data
+%  'op': operator
+%      fnhandle or string of any operator that is valid on the data
+%  'name': new name for cdat
+%  'infix': string to place between channel names in new channel
+%
+% Outputs:
+%  cout - cont struct with result of operation (time/samplerate from c1)
+
+% Tom Davidson <tjd@stanford.edu> 2003-2010
   
   a = struct('op', [],...
              'name', [],...

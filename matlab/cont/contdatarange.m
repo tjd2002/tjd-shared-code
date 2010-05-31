@@ -1,7 +1,8 @@
 function c = contdatarange(c)
-% CONTDATARANGE update datarange field of a contdata struct
-% 
-% [m x 2] array of upper and lower data ranges for m channels
+% CONTDATARANGE private function to update datarange field of a cont struct
+%  c = contdatarange(c)
+
+% Tom Davidson <tjd@alum.mit.edu> 2003-2010
 
   nbad_start = c.nbad_start;
   if isnan(nbad_start), 

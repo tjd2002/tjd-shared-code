@@ -30,7 +30,7 @@ TODO:
 
  -history of operations on a cdat? file imported from, etc...? Each
   cont* function could add an entry to a history list consisting of
-  it's args.
+  it's args. interaction with order of operations?
 
 BUGS:
 

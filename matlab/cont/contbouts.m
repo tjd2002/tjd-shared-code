@@ -2,23 +2,22 @@ function [bouts th minevpeak minpeak maxevvalley maxvalley extrema extrema_t] = 
       contbouts(c, varargin)
 % CONTBOUTS - find above-threshold periods of a signal in a cont struct
 %
-% [bouts th minevpeak minpeak maxevvalley maxvalley peakvals peakts] = ...
-%      contbouts(cont, [name/value pair args]
+%    [bouts thresh minevpeak minpeak maxevvalley maxvalley peakvals peakts] = ...
+%        contbouts(cont, [name/value pairs]
 %
-% Args:
-%  cont - cont structure
-%   'timeargunits' (->'seconds'<-, 'samples') units for window, mindur,
-%        smoothwin, and outputs
-%   'datargunits' (->'data'<-, 'stdevs',) units for thresh, minpeak, minevpeak.
+% Inputs: (* means required, -> indicates default value)
+%  * cont - cont structure
+%   'timeargunits' units for window, mindur, minevdur, and outputs (->'seconds', 'samples') 
+%   'datargunits' units for thresh, minpeak, minevpeak  (->'data', 'stdevs').
 %
 %  One of the following threshold args is required, unless c.data is a
 %  logical array):
-%   'thresh' - threshold in either data units or standard devs above/below mean
+%  *'thresh' - threshold in either data units or standard devs above/below mean
 %   'thresh_fn' - defaults to '@ge' (>=). Any fn that takes 2 args (data and
 %       threshold). Try: @gt, @le, @lt, @eq (>, <=, <, =, respectively) 
 %
-%  Conditions can be applied to detected events. All default to [], for
-%  no restriction.
+%  Conditions can be applied to detected events. All are optional and
+%  default to [], for no restriction.
 %   'window' - acceptable gap between single events (<=) to be merged into
 %              a compound event (default [] = don't merge any events)
 %   'minevdur' - minimum (>=) valid length of a single event
@@ -28,7 +27,7 @@ function [bouts th minevpeak minpeak maxevvalley maxvalley extrema extrema_t] = 
 %   'maxevvalley' - maximum (<=) valley value for a single event to be valid
 %   'maxvalley' - maximum (<=) valley value for a compound event to be valid
 %
-%  Options for how bouts are calculated
+%  Options for how bouts are calculated. Optional.
 %   'interp' - When true, estimate threshold crossing times by linear
 %       interpolation between sample times (Only valid for 'thresh_fn' of
 %       >,>=,<, or <=). When false, return the first and last samples for
@@ -36,20 +35,25 @@ function [bouts th minevpeak minpeak maxevvalley maxvalley extrema extrema_t] = 
 %   'includeedges' - When true, then bouts start or end at the edge
 %       of the data if thresh_fn is true for the first/last sample
 %       (default false).
-% 
+%
 % Outputs:
 %   bouts - m x 2 array of start & end times 
-%   th, minevpeak, minpeak, maxevvalley, maxvalley - the values used for
+%   thresh, minevpeak, minpeak, maxevvalley, maxvalley - the values used for
 %       these inputs during calculation, in data units (useful if theses were
 %       specified in stdevs)
 %   extrema, extrema_t - the values and times of the max or min values
 %       (depending on thresh_fn) within each bout
 %
-% -Note: with no mindur/minevdur, bouts can be of zero duration
 %
-% Tom Davidson <tjd@alum.mit.edu> May, 2010 
+% Example: To find peaks of >= 200, plus the surrounding period when the
+% signal is still above 50, and when the total duration of the event is
+% at least 0.2 seconds:
+%
+%  [bursts] = contbouts(cdat, 'thresh', 50, 'minpeak', 200, 'mindur', 0.2)
 
-% todo:
+% Tom Davidson <tjd@alum.mit.edu> 2003-2010 
+
+% TODO
 %  - multiple channels, return cell array of bouts?
 
   %%%% input argument parsing/checking
@@ -158,7 +162,8 @@ function [bouts th minevpeak minpeak maxevvalley maxvalley extrema extrema_t] = 
   end
   
   if ~islogical(th_data)
-    warning(['user-supplied thresh_fn does not return logical array, ' ...
+    warning([mfilename ':ThreshFnError'],...
+            ['user-supplied thresh_fn does not return logical array, ' ...
              'converting using ''logical''']); %#ok
     th_data = logical(th_data);
   end,
@@ -189,21 +194,21 @@ function [bouts th minevpeak minpeak maxevvalley maxvalley extrema extrema_t] = 
     % first xing downward, signal started high
     if ~a.includeedges,
       startoffset = 1; 
+      warning([mfilename ':EdgeData'], 'Data begins during bout, ignoring first crossing');
     else
       highstart = true;
       datxi = [1 datxi']';
     end
-    % warning([mfilename ':EdgeData'], 'Data begins during bout, ignoring first crossing');
   end
   
   if th_data(end)
     % last xing upward, signal ends high
     if ~a.includeedges,
       endoffset = 1;
+      warning([mfilename ':EdgeData'], 'Data ends during bout, ignoring last crossing');
     else
       datxi = [datxi' numel(th_data)]';
     end
-    % warning([mfilename ':EdgeData'], 'Data ends during bout, ignoring last crossing');
   end
     
   if length(datxi) < (2 + startoffset + endoffset),
@@ -371,6 +376,7 @@ function [bouts th minevpeak minpeak maxevvalley maxvalley extrema extrema_t] = 
       [extrema(k) exti] = ext_fn(c.data(bstarti:bendi));
       extrema_t(k) = bstarti + exti -1;
     end
+    
     if strcmp(a.timeargunits, 'seconds');
       extrema_t = c.tstart + ((extrema_t-1) ./ c.samplerate);
     end

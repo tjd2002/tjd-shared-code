@@ -1,5 +1,19 @@
 function c = contfn(c, varargin)
 % CONTFN apply a function to the data in a contdata struct
+%
+%  cout = contfn(c, [name/value pairs])
+%
+% Inputs: * = required
+%  *c - cont struct
+%  *'fn' - function to apply to the data (function name or
+%      function_handle)
+%  'name' - new name for cout
+%  'suffix' - string to append to c.chanlabels (default '_fn');
+%
+% Ouput:
+%  cout - cont struct with processed data
+  
+% Tom Davidson <tjd@stanford.edu> 2003-2010
   
   a = struct(...
       'fn', [],...
@@ -16,6 +30,10 @@ function c = contfn(c, varargin)
     else
       a.suffix = '_fn';
     end
+  end
+  
+  if isempty(a.fn)
+    error('Must provide a ''fn'' argument');
   end
   
   if ischar(a.fn),

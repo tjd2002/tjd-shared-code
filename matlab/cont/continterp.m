@@ -1,19 +1,29 @@
 function c = continterp(c,varargin)
-% CONTINTERP resample and interpolate cont struct data to match timestamps
+% CONTINTERP resample and interpolate cont data at specified sample times
 %
-% param/value pair args:
+%  c = continterp(c,[name/value pairs])
 %
-%  'timewin', tstart/tend of resulting cdat (default same as input)
-%  'nsamps'/'samplerate': specify interp points
-%  'method', interp1 method ({'cubic'}, 'spline', 'linear', 'nearest' etc)
-%            (NB: spline will propagate NaNs through all data)
+% The sample times at which to interpolate the data are specified by
+% providing a start/end time, and either a total number of samples, or a
+% new sampling rate.
+%
+% Inputs: (* = required)
+%  *c - cont struct to be interpolated
+%  'timewin' - start/end time of resulting cdat (default same as input)
+%  *'nsamps'/'samplerate' - number of samples or sampling rate for cout.
+%  'method', interpolation method ({'cubic'}, 'spline', 'linear', 'nearest' etc)
+%      (NB: spline will propagate NaNs through all data)
 %  'resampbeforeinterp', should we resample near new samplerate before
-%  interpolating? (avoids aliasing, but increases edge effects for
-%  signals with lots of NaN/Inf)
+%      interpolating? This is important to avoid aliasing, but when a signal
+%      contains short stretches of data surrounded by NaN/Inf values, it
+%      can worsen the edge effects caused by interpolation. (Defaults to
+%      'true', except that for 'nearest' interpolation, it is always false).
 %
-% todo:
-%   -performance: bracket timewin before resample&interp1
+%  Outputs:
+%  c - cont struct with new timebase
   
+% Tom Davidson <tjd@stanford.edu> 2003-2010
+
   a = struct(...
       'timewin',[],...
       'nsamps', [],...
@@ -118,5 +128,4 @@ function c = continterp(c,varargin)
   
   % crop data more tightly using a.timewin
   c = contwin(c, a.timewin, 'samps_nearest');
-
 

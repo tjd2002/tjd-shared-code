@@ -1,13 +1,15 @@
 function [xc lags_t xc_correct xc_correct_count cdat] = contxcorr(cs, varargin)
-% CONTXCORR (see mkcorr!) do an xcorr between 2 cdat chans, 2 cdat structs,
+% CONTXCORR *EXPERIMENTAL* (see mkcorr!) do an xcorr between 2 cdat chans, 2 cdat structs,
 % or acorr on 1 chan/struct. Returns array for several bouts. NaNs treated
 % as missing values for 'none_correct' method.
 %
 % -bouts can be overlapping/unordered.
-  
+%
 % TODO:
 % -deal with short windows? 
 % -maxlags in t?
+
+% Tom Davidson <tjd@stanford.edu> 2003-2010
   
   a = struct(...
       'chans', [],...

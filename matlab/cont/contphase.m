@@ -1,31 +1,31 @@
 function [cout pks pks_t vals vals_t] = contphase(c, varargin)
 % CONTPHASE - compute the instantaneous phase at each sample of a cont struct
 %
-% [cout pks pks_t vals vals_t] = contphase(cont, [name/value pair args]
+% [cout pks pks_t vals vals_t] = contphase(c, [name/value pair args]
 %
-% Args:
-%  cont = cont structure 
+% Inputs:
+%  c - cont structure 
 %  'method' - one of:
 %     -'interp_peak' interpolate phase linearly between peaks
 %     -'interp_valley'  ditto, but for valleys 
 %     -'interp_both' interp peak-valley and valley-peak separately (Klausberger's method)
-%     -'hilbert' imaginary part of hilbert transform is inst phase (default)
-%  'unwrap': whether to unwrap phase to avoid discontinuities. (Useful for
-%            later interpolation with contlookup.)
-%     -true/false (default false)
+%     -'hilbert' imaginary part of analytic signal given by hilber
+%         transform is inst phase (default)
+%  'unwrap' - whether to unwrap phase to avoid discontinuities. Useful for
+%      later interpolation with contlookup. (default false)
 % 
-% Note that it is only valid to compute the instantaneous phase of a
-% signal with a narrow bandwidth, i.e. one that has been passed through a
-% bandpass filter.
-%
-% Tom Davidson <tjd@alum.mit.edu>, 2010
+% Note that it is only reasonable/valid to compute the instantaneous phase
+% of a signal with a narrow bandwidth, e.g. one that has been passed through
+% a bandpass filter.
+
+% Tom Davidson <tjd@stanford.edu>, 2010
 
 % todo:
 %  -multiple channels (use contlocalmax, loops);
 %  -deal with spurious peaks/valleys at start/end of signal (use nbad_*
 %  fields?)
   
-    
+  
   a = struct(...
       'method', 'hilbert',...
       'unwrap', false);

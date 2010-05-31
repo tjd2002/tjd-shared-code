@@ -1,5 +1,30 @@
 function [c chans] = contchans(c,varargin)
-% CONTCHANS extract/remove channels from contdata struct
+% CONTCHANS - select channels from cont struct
+%
+%    [cout chans] = contchans(c, [name/value pairs])
+%
+% Inputs: (* means required, -> indicates default value)
+%   * c - a cont struct (required)
+%
+%  One of the following two args is required:
+%   'chans' - index of channels to select (numeric array)
+%   'chanlabels' - labels of channels to select (string or cell array of strings)
+%
+%  Optional:
+%   'remove' - invert the selection; select all channels except those
+%        indicated (default false)
+%
+%
+% Outputs:
+%  cout - a cont struct containing only the requested channels
+%  chans - the indexes of the channels that were selected
+%
+%
+% Example: To select just the channels named 'LFP1' and 'LFP2':
+% 
+%  cdat = contchans(cdat_lfp, 'chanlabels', {'LFP1' 'LFP2'});
+
+% Tom Davidson <tjd@alum.mit.edu> 2003-2010
   
   a = struct(...
       'chans',[],...
@@ -30,7 +55,7 @@ function [c chans] = contchans(c,varargin)
   if ~isempty(a.chanlabels),
     chans = [];
     if length(unique(c.chanlabels)) ~= length(c.chanlabels),
-      error('repeated chanlabels in cont struct');
+      warning([mfilename ':ContLabelsRepeat'], 'repeated chanlabels in cont struct');
     end
     for chanstr = a.chanlabels(:)'
       chans = [chans find(strcmp(chanstr,c.chanlabels))];

@@ -1,5 +1,15 @@
 function c = contmean(c, varargin)
-% CONTMEAN return mean of channels in a contstruct
+% CONTMEAN calculate mean of channels in a cont struct
+%  c = contmean(c, [name/value pairs])
+% 
+% Inputs:
+%  c - cont struct
+%  'name' - New name for struct
+%
+% Outputs:
+%  cout - cont struct with mean values for each channel
+
+% Tom Davidson <tjd@stanford.edu> 2003-2010
   
   a = struct(...
       'name', []);

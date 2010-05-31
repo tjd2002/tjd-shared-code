@@ -1,12 +1,26 @@
 function c = contresamp(c,varargin)
-% CONTRESAMP resample data in a cont struct, return new cont struct
+% CONTRESAMP up- or downsample data in a cont struct, with antialiasing
 %
-%  -does appropriate filtering, intelligently chooses decimate rather than
-%  upfirdn when possible.
+%  [cout] = contresamp(c, [param/value pair args])
 %
-% param/value pair args:
+%  Usage note: to resample a cont struct to a specific samplerate (rather
+%  than by a fraction), use the continterp function with the 'samplerate'
+%  option. 
+%  
+% Inputs:
+%  * c - a cont struct
+%  *'resample'- fraction to up/downsample signal
 %
-%  'resample', fraction to up/downsample signal
+%  Infrequently-used options:
+%   'tol' - fractional tolerance for detecting integer resampling factors
+%   'res_filtlen' - length of resampling filter to apply in non-decimation
+%      case (defaults to 10)
+%
+% Example: To downsample a cont struct to a 5x lower sampling frequency
+%
+%  cout = contresamp(c, 'resample', 1/5);
+
+% Tom Davidson <tjd@alum.mit.edu> 2003-2010 
   
   a = struct(...
       'resample',[],...
@@ -36,7 +50,7 @@ function c = contresamp(c,varargin)
       dec_f = fix(1/a.resample);
       res_f = 1/dec_f;
 
-      % use a 30-pt FIR filter to conserve memory (decimate usually uses
+      % use a 30-pt FIR filter to conserve memory ('decimate' usually uses
       % IIR/filtfilt)
       filtlen = 30; % the default for decimate, just being explicit
       
@@ -61,17 +75,18 @@ function c = contresamp(c,varargin)
       
       c.samplerate = c.samplerate/dec_f;
 
-      %% decimate has 0 group delay (i.e. first point represents same
-      %start time), but since it takes every 'rth' point, the last sample
-      %in the sequence will likely not be from the same time as the last
-      %sample in the input. Recalculate its time from the samplerate
+      % decimate has 0 group delay (i.e. first point represents same
+      %start time), but since it takes every 'rth' point after the first, the last
+      %sample in the sequence will likely not be from the same time as the
+      %last sample in the input. Recalculate its actual time from the samplerate
       c.tend = c.tstart + ((size(c.data,1)-1) ./c.samplerate);
       
     else
       
       % 'resample'
-      % use a wider tolerance than default (1e-6) to get smaller terms
-      % for resampling.
+      % use a wider tolerance than the default (1e-6) to get smaller terms
+      % for resampling (use continterp for very precise control over sampling
+      % rates/times)
       [res_num res_den] = rat(a.resample, a.resample.*a.tol);
       res_f = res_num/res_den;
       
@@ -83,7 +98,9 @@ function c = contresamp(c,varargin)
         disp('resampling...');
         % upfirdn (called by resample) can't handle 'single' type data. bug
         % filed with mathworks 11/14/06, confirmed by Mathworks as fixed in R14SP2)
-        data_res(:,col) = resample(double(c.data(:,col)),res_num,res_den,filtlen);
+        data_res(:,col) = resample(double(c.data(:,col)),...
+                                   res_num,res_den,...
+                                   filtlen);
       end
       c.data = cast(data_res,datatype); % back to original data type
       clear data_res;

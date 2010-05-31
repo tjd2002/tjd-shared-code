@@ -1,5 +1,5 @@
 function c = imcontsegs(varargin)
-% IMCONT make contdata struct from non-overlapping segments of cont data 
+% IMCONT make contdata struct from chunks of timeseries  data 
 %
 % possible inputs:
 %  
@@ -40,6 +40,7 @@ function c = imcontsegs(varargin)
 
   
   nsegs = numel(a.starts_t);
+
   if ~a.rowdata
     nchans = size(a.data{1},2);
   else
@@ -54,18 +55,20 @@ function c = imcontsegs(varargin)
     [a.starts_t sorti] = sort(a.starts_t);
     a.data = a.data(sorti);
   end
-  
+
+  % get timewin to import
   if isempty(a.timewin)
     a.timewin(1) = a.starts_t(1);
     a.timewin(2) = a.starts_t(end)+ (numel(a.data{end})-1)/a.samplerate;
+    warning(sprintf('No ''timewin'' provided, using extent of data: [%d %d]', a.timewin)); %#ok
   end
     
-  dat = NaN(ceil(diff(a.timewin)*a.samplerate), nchans);
-  
+  % align data to sampling rate (if starts_t are not aligned)
   startsi = (a.starts_t-a.timewin(1)).*a.samplerate + 1;
   aligns_t = (startsi-round(startsi))/a.samplerate;
-
-  % warn if samples rounded 
+  startsi = round(startsi);
+  
+  % warn if jitter of > 1% of samplerate was introduced
   if ~a.alignok && any(aligns_t>1/a.samplerate/100),
     warning(['start times rounded > 1% of sample period, largest align = ' ...
              num2str(max(abs(aligns_t(:)))*1000) ' ms']);
