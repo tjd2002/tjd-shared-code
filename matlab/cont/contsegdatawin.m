@@ -1,21 +1,24 @@
-function [data] = contsegdatawin(cont, t, offset)
-% CONTSEGDATA get windows of data around time points, return as a matrix
-  
-  if size(cont.data,2) > 1, 
-    error ('only one-channel supported right now, use contchans');
+function [data segs_samp] = contsegdatawin(c, t, offset, varargin)
+% CONTSEGDATAWIN get windows of data around time points, return as a matrix
+%  [data segs_samp] = contsegdatawin(c, t, offset)
+%
+% Inputs:
+%  c - cont struct
+%  t - time points
+%  offset - start/end time offsets from t to make segs
+%
+% Outputs: (same as contsegdata)
+%  data - data selected from c.data, 1 column per channel
+%  segs_samp - m x 2 array of indexes into c.data for each seg
+
+  a = struct(...
+      'excludenans', []);
+  a = parseArgsLite(varargin,a);
+
+  if numel(offset) ~= 2,
+    error ('''offset'' must be a 2-element vector of times');
   end
   
-  t_samp = round((t - cont.tstart) * cont.samplerate)+1;
-
-  offset_samp = round(offset * cont.samplerate);
+  segs = bsxfun(@plus, t(:),offset(:)');
   
-  % omit time windows that are off edge of available data
-  t_samp(t_samp <= -offset_samp(1) | t_samp >= size(cont.data,1)-offset_samp(2)) ...
-      = [];
-  
-  for k = 1:size(t_samp,1),
-    
-    data(k,:) = cont.data(t_samp(k)+offset_samp(1):t_samp(k)+offset_samp(2));
-
-  end
-  
+  [data segs_samp] = contsegdata(c, segs, a.excludenans);
