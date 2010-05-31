@@ -59,10 +59,15 @@ function c = continterp(c,varargin)
 
   c = contwin(c, timewin);
   
-  %%% initial resample of data to roughly correct sampling rate (avoid
-  %%% aliasing)
-
-  if ~strcmp(a.method, 'nearest')&&a.resampbeforeinterp
+  %%% initial downsample of high sampling rate data to avoid aliasing
+  if ~strcmp(a.method, 'nearest') 
+    warning([mfilename ':NearestMethod'], ...
+            ['''nearest'' method implies no resampling before interpolation. ' ...
+             'Beware aliasing']);
+    a.resampbeforeinterp = false;
+  end
+  if samplerate_effective < c.samplerate  && a.resampbeforeinterp
+    disp('Resampling before interpolation...');
     c = contresamp(c, ...
                    'resample', samplerate_effective./c.samplerate,...
                    'tol', 0.05); % use wide tolerance since we're going to
