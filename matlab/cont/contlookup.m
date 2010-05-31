@@ -1,7 +1,7 @@
-function [vals idx] = contlookup(c, varargin)
+function [vals] = contlookup(c, varargin)
 % CONTLOOKUP Get values of cont function at particular times (uses interp1/1q)
 %
-% [vals idx] = contbouts(cont, [name/value pair args]
+% [vals] = contlookup(c, [name/value pair args]
 %
 % Args:
 %  cont = cont structure
