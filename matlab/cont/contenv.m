@@ -26,24 +26,26 @@ function c = contenv (c,varargin)
   disp('calculating envelope...');
 
   switch(a.envopt.method)
-   case 'hilbert',
-    % since hilbert is IIR, we need to handle NaN's specially, by
-    % omitting them, currently
-% $$$     if nchans > 1,
-% $$$       error('hilbert envelope currently only supports one channel');
-% $$$     end
+   case 'hilbert'
+    suffix = 'env_hilb';
+
+    if any(isnan(c.data))
+      error(['Cannot calculate Hilbert transform on data with NaNs; fix ' ...
+             'data or use another method']); %#ok
+    end
 
     for k = 1:nchans,
-      notnani = ~isnan(c.data(:,k));
-      % hilbert seems to be buggy with 'single' data
-      c.data(notnani,k) = cast(abs(hilbert(double(c.data(notnani,k)))), class(c.data));
+
+      % hilbert seems to be buggy with 'single' data; cast to double and back
+      dtype = class(c.data);
+      
+      % get amplitude envelope (magnitude of the analytic signal)
+      tmp = abs(hilbert(double(c.data(:,k))));
+
+      % store result in the original data type
+      c.data(:,k) = cast(tmp, dtype);
+
     end
-    suffix = 'env_hilb';
-    
-   case 'hilbert_complex',
-    % hilbert seems to be buggy with 'single' data
-    c.data = cast(hilbert(double(c.data)), class(c.data));
-    suffix = 'env_hilbc';
     
    case 'peaks',
     % localmax works across columns
