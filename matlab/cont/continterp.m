@@ -24,10 +24,10 @@ function c = continterp(c,varargin)
   a = parseArgsLite(varargin,a);
   
   if isempty(a.timewin),
-    if size(c.data,1) > 1e6;
-      warning('no timewin provided interpolating entire cont struct');
-    end
-
+% $$$     if size(c.data,1) > 1e6;
+% $$$       warning('no timewin provided interpolating entire cont struct');
+% $$$     end
+    
     a.timewin = [c.tstart c.tend];
     
   end
@@ -53,10 +53,12 @@ function c = continterp(c,varargin)
   end
   
   %%% [bracket requested timerange]
-  % pad with 2 samples, but don't extend past tstart/tend
+  % pad with 2 samples (larger of pre/post samples),
+  % but don't extend past tstart/tend
   timewin = a.timewin + [-2 2]./(min([c.samplerate a.samplerate]));
   timewin = [max(timewin(1), c.tstart) min(timewin(2), c.tend)];
 
+  % crop data early to save filtering time
   c = contwin(c, timewin);
   
   %%% initial downsample of high sampling rate data to avoid aliasing
@@ -86,7 +88,7 @@ function c = continterp(c,varargin)
   if ~isempty(a.nsamps),
     xi = linspace(a.timewin(1), a.timewin(2), a.nsamps);
   else
-    xi = a.timewin(1):1/a.samplerate:a.timewin(2);
+    xi = timewin(1):1/a.samplerate:timewin(2);
   end
   
   disp('interpolating...');
@@ -104,14 +106,17 @@ function c = continterp(c,varargin)
     % last argument says use NaN for extrapolated values
     newdata(:,k) = interp1(x,c.data(:,k), xi, a.method, NaN);
   end
-
   c.data = newdata;
   
   c.tstart = xi(1);
   c.tend = xi(end);
   c.samplerate = samplerate_effective;
-  c = contdatarange(c);
-
+  
   % hard to say where the bad samples ended up
   c.nbad_start = NaN;
   c.nbad_end = NaN;
+  
+  % crop data more tightly using a.timewin
+  c = contwin(c, a.timewin, 'samps_bracket');
+
+
