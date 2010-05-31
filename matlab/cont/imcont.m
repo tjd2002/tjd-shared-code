@@ -1,4 +1,4 @@
-function c = imcont(varargin)
+function [c timestamp ts_syn] = imcont(varargin)
 % IMCONT - create cont data struct from timeseries data
 %
 % Creates a 'cont' data struct from timeseries data (fields documented in
@@ -59,10 +59,13 @@ function c = imcont(varargin)
 %   'chanlabels'- text labels for channels.
 %   'dataunits'- defaults to '' (attempts to convert to mV if possible).
 %   'timeunits'- 'MWL_timestamps', 'microseconds' or 'seconds'.
-%   'ts_syn_linmode' - method for estimating sampling rate. 'regress'
-%       performs a linear regression and should give lower error (though
-%       possibly higher max_tserr), 'ends'
-%       linearizes from first to last observed timestamp. (default ends)
+
+%   'ts_syn_linmode' - method for fitting a linear samplerate to observed
+%       sample times. 'ends' (the default) simply linearizes from first to last
+%       observed timestamp. 'regress' performs a least-squares linear
+%       regression and should give lower mean error with less bias (i.e. possibly
+%       higher max_tserr, but lower mean_tserr)
+%
 %   'allowable_tserr_samps' - maximum allowable timestamp error, in # of
 %       samples (default 0.5).
 %
@@ -85,6 +88,7 @@ function c = imcont(varargin)
 %     'max_tserr' - maximum timestamp error introduced across entire signal
 %         by the conversion from 1 timestamp/sample, to a fixed
 %         samplerate.
+%     'mean_tserr' - mean timestamp error, or mean temporal bias.
 %
 % Example: Import a Neuralynx .csc file, downsampled to 1kHz
 %
@@ -516,24 +520,31 @@ function c = imcont(varargin)
   dts = diff(timestamp);
   gapi = find (dts > 1.5*median(dts));
   if ~isempty(gapi)
-    warning('Timestamp data appears to have gaps: after indexes [%s] (times [%s])',...
+    error('Timestamp data appears to have gaps: after indexes [%s] (times [%s])',...
             num2str(gapi), num2str(timestamp(gapi)));
   end
   
   %%% calculate linear fit 'synthetic timestamps'
+  numts = numel(timestamp);
   switch lower(a.ts_syn_linmode)
    case 'regress'
     % find best fit to real timestamps by linear regression
-    numts = numel(timestamp);
     tsb = regress(timestamp(:), [ones(numts,1) (1:numts)']);
 
     % synthesize timestamps from slope/offset
     ts_syn = tsb(1) + (1:numts)'*tsb(2);
     
+   case 'robust'
+    warning('experimental robust regression!');
+    tsb = robustfit((1:numts)', timestamp(:), 'fair', 2);
+
+    % synthesize timestamps from slope/offset
+    ts_syn = tsb(1) + (1:numts)'*tsb(2);
+
    case 'ends'
 
     % linear spacing between first/last timestamp
-    ts_syn = linspace(timestamp(1), timestamp(end), numel(timestamp))';
+    ts_syn = linspace(timestamp(1), timestamp(end), numts)';
 
    otherwise
     error('Unrecognized ''ts_syn_linmode'': try ''regress'' ''ends''.');
@@ -544,12 +555,11 @@ function c = imcont(varargin)
   
   % # of sample periods elapsed / time elapsed
   c.samplerate = (size(ts_syn,1)-1)*recsize / diff(ts_syn([1 end]));
-
-  c.tstart = ts_syn(1);
-  c.tend = ts_syn(end)+(recsize-1)/c.samplerate;
   
-  % calculate largest timing error introduced by our linearization procedure
-  [c.max_tserr] = max(abs(timestamp(:) - ts_syn(:)));
+  % calculate stats on timing error introduced by our linearization procedure
+  tserr = timestamp(:) - ts_syn(:);
+  [c.max_tserr] = max(abs(tserr));
+  [c.mean_tserr] = mean(tserr);
   if c.max_tserr > a.allowable_tserr_samps*(1/c.samplerate),
     error(['max error in computed timestamp (%3.3f ms) will be greater than %.1f%% of ' ...
            'sampling resolution (%3.3f ms) !!!--adjust ''allowable_tserr_samps'' or '...
@@ -557,6 +567,10 @@ function c = imcont(varargin)
           c.max_tserr*1000, a.allowable_tserr_samps*100, 1/c.samplerate*1000);
   end
 
+  % calculate start / end times
+  c.tstart = ts_syn(1);
+  c.tend = ts_syn(end)+(recsize-1)/c.samplerate;
+  
   %%% convert datatype before manipulating data
   if ~isempty(a.convertdatafun) && ~strcmp(func2str(a.convertdatafun), class(c.data)),
     disp(['converting to ' func2str(a.convertdatafun) '...']); % usu. single
@@ -578,7 +592,7 @@ function c = imcont(varargin)
 
   %%% trim time more prettily (by sample now, rather than by record)
   if ~isempty(a.timewin)
-    tw = a.timewin
+    tw = a.timewin;
     if tw(1)<c.tstart
       warning('Requested start time (%.3f s) out of range, using data limits (%.3f s)',...
               tw(1),c.tstart);
