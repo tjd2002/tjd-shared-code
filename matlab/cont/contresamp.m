@@ -40,15 +40,23 @@ function c = contresamp(c,varargin)
       % IIR/filtfilt)
       filtlen = 30; % the default for decimate, just being explicit
       
-      % pre-allocate, preserve datatype of c.data
+      % pre-allocate decimated array, preserving datatype of c.data
       data_dec = zeros(ceil(nrows/dec_f), ncols, datatype);
       disp('decimating...');
       for col = 1:ncols,
-        % cast to double since 2007a's decimate doesn't like single
+        % cast to double and back since 2007a's decimate doesn't like single
         % datatype (per Greg Hale)
-        data_dec(:,col) = decimate(double(c.data(:,col)),dec_f,filtlen,'fir');
+        data_dec(:,col) = cast(decimate(double(c.data(:,col)),...
+                                        dec_f, ...
+                                        filtlen,...
+                                        'fir'), ...
+                               datatype);
       end
-      c.data = cast(data_dec,datatype); % back to original data type
+
+      assert(strcmp(class(data_dec), datatype), ...
+             'wrong datatype for decimated data');
+
+      c.data = data_dec;
       clear data_dec;
       
       c.samplerate = c.samplerate/dec_f;
