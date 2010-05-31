@@ -127,8 +127,9 @@ function c = subf_contfilter(c,filt)
   filtlen = length(filt.dfilt.Numerator);
   
   % if samplerate is within 1%, use the filters (i.e. 200Hz would be 204Hz) 
-  if abs(log10(filt.filtopt.Fs/c.samplerate)) > log10(1.02),
-    error('samplerate of filter doesn''t match data');
+  if abs(log10(filt.filtopt.Fs/c.samplerate)) > log10(1.01),
+    error(['samplerate of filter doesn''t match data, use a filtopt struct ' ...
+           'instead']);
   end
   
   % get rid of previous states, if any
