@@ -48,18 +48,19 @@ function c = contenv (c,varargin)
     end
     
    case 'peaks',
-    % localmax works across columns
-    % find all minima and maxima
-    pks_idx = localmax(c.data);
-    pks_idx = pks_idx | localmax(-c.data);
-    
-    for k = 1:nchans,
-      % save some memory, maybe
-      cdata_type = class(c.data);
-      c.data(:,k) = interp1q(cast(find(pks_idx(:,k)), cdata_type), abs(c.data(pks_idx(:,k),k)), cast((1:nsamps)',cdata_type));
-    end
-    
     suffix = 'env_pks';
+
+    for k = 1:nchans,
+      % rectify the channel
+      abschan = abs(c.data(:,k));
+      % find local maxima (peaks)
+      pks_idx = localmax(abschan);
+
+      % linear interpolation between peaks
+      c.data(:,k) = interp1q(find(pks_idx(:,k)), ...
+                             abschan(pks_idx), ...
+                             (1:nsamps)');
+    end
     
    case 'rms', 
     if isempty(a.envopt.rms_window_t),
