@@ -3,13 +3,22 @@ function c = contenv (c,varargin)
   
   a = struct(...
       'envopt',[],...
+      'method',[],...
+      'rms_window_t',[],...
       'nosuffix', false);
   
   a = parseArgsLite(varargin,a);
 
-  if isempty(a.envopt),
+  if ~isempty(a.envopt) && ~isempty(a.method),
+    error('Can''t provide both ''method'' and ''envopt'' arguments')
+  end
+  
+  if isempty(a.method)
     disp('no envelope method requested, using mkenvopt defaults')
     a.envopt = mkenvopt;
+  else
+    a.envopt = mkenvopt('method', a.method, ...
+                        'rms_window_t', a.rms_window_t);
   end
   
   [nsamps nchans] = size(c.data); %#ok
