@@ -60,7 +60,7 @@ function c = continterp(c,varargin)
   c = contwin(c, timewin);
   
   %%% initial downsample of high sampling rate data to avoid aliasing
-  if ~strcmp(a.method, 'nearest') 
+  if strcmp(a.method, 'nearest') 
     warning([mfilename ':NearestMethod'], ...
             ['''nearest'' method implies no resampling before interpolation. ' ...
              'Beware aliasing']);
