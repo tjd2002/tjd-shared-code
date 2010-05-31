@@ -51,7 +51,6 @@ function [c timestamp ts_syn] = imcont(varargin)
 %
 %  Shared Inputs: (may be implied/overwritten depending on import type, above)
 %   'invert' - Whether to invert the sign of the data. (see above for defaults)
-%   'resample'- resamples data (using contresamp) by given factor.
 %   'timewin'- range of times to select (seconds).
 %   'name'- a name for the contstruct (default based on filename, chans).
 %   'convertdatafun' - defaults to '@single'; use [] for no conversion.
@@ -373,7 +372,6 @@ function [c timestamp ts_syn] = imcont(varargin)
         'chanlabels', cl,...
         ...
         'chans', a.chans,...
-        'resample', a.resample,...
         'timewin', a.timewin,...
         'name', a.name,...
         'chanvals', a.chanvals,...
@@ -576,15 +574,7 @@ function [c timestamp ts_syn] = imcont(varargin)
     disp(['converting to ' func2str(a.convertdatafun) '...']); % usu. single
     c.data = a.convertdatafun(c.data);
   end
-  
-  %%% resample, if requested
-  
-  if ~isempty(a.resample),
-    disp('resampling...');
-    c = contresamp(c,'resample',a.resample);
-    disp('Done...');
-  end
-      
+        
   %%% invert sign of data if required
   if invert,
     c.data = -c.data;
