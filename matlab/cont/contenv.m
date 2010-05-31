@@ -66,6 +66,10 @@ function c = contenv (c,varargin)
     if isempty(a.envopt.rms_window_t),
       error('''rms_window_t'' must be provided for ''rms'' method');
     end
+    suffix = ['_rms_' num2str(a.envopt.rms_window_t*1000) 'ms'];
+    
+    % save current chanlabels;
+    oldcl = c.chanlabels;
     
     if a.envopt.rms_window_t < (1.5/c.samplerate)
       warning(['rms window will be 1 sample or less, returning original ' ...
@@ -74,14 +78,16 @@ function c = contenv (c,varargin)
       % do RMS:
       % 1) Square signal
       c.data = c.data.^2;
-      % 2) calculate moving Mean of squared signal
+      % 2) calculate moving mean of squared signal
       c = contfilt(c, 'filtopt', mkfiltopt('name', 'rms_averaging',...
                                            'filttype', 'rectwin',...
                                            'length_t', a.envopt.rms_window_t));
       % 3) return Root of mean squared signal
       c.data = sqrt(c.data);
     end
-    suffix = ['_rms_' num2str(a.envopt.rms_window_t*1000) 'ms'];
+
+    % discard suffixes from contfn/contfilt, we'll provide our own
+    c.chanlabels = oldcl; 
     
    otherwise
     error('unsupported envelope ''method''');
