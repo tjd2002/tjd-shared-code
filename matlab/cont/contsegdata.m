@@ -1,18 +1,29 @@
-function [data segs_samp] = contsegdata(cont, segs)
+function [data segs_samp] = contsegdata(c, segs)
 % CONTSEGDATA get raw data points from segments, no time info
-% $Id: contsegdata.m 2213 2009-08-03 19:38:21Z tjd $
 %
-% function [data segs_samp] = contsegdata(cont, segs)
-
-  goodsegs = segs(inseg([cont.tstart cont.tend], segs),:);
+%  [data segs_samp] = contsegdata(c, segs)
+%
+% Inputs:
+%  c - cont struct
+%  segs - m x 2 array of seg start/end times
+% 
+% Outputs:
+%  data - data selected from c.data, 1 column per channel
+%  segs_samp - m x 2 array of indexes into c.data for each seg
+  
+% Tom Davidson <tjd@stanford.edu> 2003-2010
+  
+  % select segs in range
+  goodsegs = segs(inseg([c.tstart c.tend], segs),:);
   if numel(goodsegs) ~= numel(segs)
-    warning('ignoring segs outside of cdat range');
+    warning('ignoring segs outside of cont range');
     segs = goodsegs;
   end
   
-  segs_samp = round((segs - cont.tstart) * cont.samplerate)+1;
+  % get indexes into c.data
+  segs_samp = round((segs - c.tstart) * c.samplerate)+1;
 
-  dat_use = false(size(cont.data,1),1);
+  dat_use = false(size(c.data,1),1);
   
   for k = 1:size(segs,1),
     
@@ -20,9 +31,9 @@ function [data segs_samp] = contsegdata(cont, segs)
     dat_use(samps_i) = true;
 
     % don't include timepoints with NaNs in any channel
-    dat_use(samps_i(any(isnan(cont.data(samps_i,:)),2))) ...
+    dat_use(samps_i(any(isnan(c.data(samps_i,:)),2))) ...
         = false;
 
   end
 
-  data = cont.data(dat_use,:);
+  data = c.data(dat_use,:);
