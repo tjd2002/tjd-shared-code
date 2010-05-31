@@ -117,6 +117,6 @@ function c = continterp(c,varargin)
   c.nbad_end = NaN;
   
   % crop data more tightly using a.timewin
-  c = contwin(c, a.timewin, 'samps_bracket');
+  c = contwin(c, a.timewin, 'samps_nearest');
 
 
