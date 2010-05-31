@@ -2,7 +2,7 @@ function c = contwin(c, timewin, method)
 % CONTWIN select a time window from a larger cdat struct
   
   if nargin<3,
-    method = 'samps_bracket';
+    method = 'samps_nearest';
   end
   
   if diff(timewin)<=0
