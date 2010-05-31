@@ -1,38 +1,63 @@
 function [P F] = contpsd(c, varargin)
 % CONTPSD compute power spectral density estimate across segs of cont data
-
+%
+% [P F] = contpsd(c, [name/value pairs]);
+% 
+%  WARNING: Experimental code, not well-tested. See pwelch for 
+% 
+% Inputs:
+%  c - cont struct
+%  'segs' - restrict analysis to subsets of c.data
+%  'method', - method used to calculate psd 
+%    -'welch': currently only method available. See help pwelch
+%  *'window_t' - time window (in seconds) for calculating PSD
+%  'nfft' - number of fft points (see pwelch, etc)
+%  'detrend' - whether to detrend the data in each seg (default:
+%      'constant'), see help detrend for other options
+%
+% Outputs:
+%  P - power spectral density at frequencies in F
+%  F - frequencies at which power is estimated
+   
   a = struct(...
-      'chans', [],...
-      'chanlabels', [],...
       'segs', [],...
       'method', 'welch',...
       'nfft', [],...
       'window_t', [],...
+      'overlap_frac', 0.5,...
       'detrend', 'constant');
   
   a = parseArgsLite(varargin,a);
-  
-  % figure out the smallest timewin we can use to calculate xcorrs
-  timewin = [max([c.tstart]) min([c.tend])];
-  if ~isempty(a.segs),
-    timewin = [max(c.tstart, min(a.segs(:))) ....
-               min(c.tend, max(a.segs(:)))];
+
+  switch a.method
+   case 'welch',
+    %ok
+   otherwise
+    error('Unrecognized psd method')
   end
   
-  if diff(timewin)<=0, 
-    error(['no overlap between cdat inputs (or zero diff between first/last ' ...
-           'bout edge)']);
+  if all(size(c.data,2) ~= 1)
+    error('Use contchans to select a single channel.');
+  end
+
+  % use all data if no segs provided
+  if isempty(a.segs),
+    a.segs = [c.tstart c.tend];
+  end
+
+  % calculate window to use
+  if isempty(a.window_t)
+    error('Must provide ''window_t''.');
   end
   
-  cdat = contwin(contchans(c, 'chans', a.chans, 'chanlabels', a.chanlabels),...
-                 timewin);
+  % convert window/noverlap to samples
+  window = ceil(a.window_t .* c.samplerate);
+  noverlap = ceil(a.window_t.*a.overlap_frac.*c.samplerate);
   
-  if all(size(cdat.data,2) ~= 1)
-    error('Exactly 1 channel must be specified')
+  if noverlap<0 || noverlap>window
+    error(['Overlap must be non-negative, and no greater than window ' ...
+           'length']);
   end
-  
-  % convert lags to samples
-  window = ceil(a.window_t .* cdat.samplerate);
   
   nsegs = size(a.segs,1);
   
@@ -41,13 +66,9 @@ function [P F] = contpsd(c, varargin)
   wtsum = 0;
 
   for k = 1:nsegs
-    cdat_k = contwin(cdat,a.segs(k,:));
-    dat = cdat_k.data;
+    c_k = contwin(c,a.segs(k,:));
+    dat = c_k.data;
 
-    if ~isempty(a.detrend)
-      dat = detrend(dat, a.detrend);
-    end
-      
     len = size(dat,1);
 
     % have to skip if bout shorter than requested window
@@ -55,10 +76,16 @@ function [P F] = contpsd(c, varargin)
       continue
     end
 
-    [P_k F] = pwelch(dat,window,[],a.nfft,cdat_k.samplerate);
+    % detrend if requested
+    if ~isempty(a.detrend)
+      dat = detrend(dat, a.detrend);
+    end
 
-    % not sure about this weight--want it to work same as within pwelch
-    wt = floor(len./window);
+    % compute periodogram
+    [P_k F] = pwelch(dat,window,noverlap,a.nfft,c_k.samplerate);
+
+    % weight by # of windows in this seg (we'll re-normalize below)
+    wt = floor(len-window./(window-noverlap))+1;
     wtsum = wtsum + wt;
     
     if isempty(P),
@@ -68,4 +95,5 @@ function [P F] = contpsd(c, varargin)
     end
   end
   
+  % divide by number of windows contributing
   P = P./wtsum;
