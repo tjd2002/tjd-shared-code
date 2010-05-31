@@ -56,10 +56,18 @@ function c = contenv (c,varargin)
       % find local maxima (peaks)
       pks_idx = localmax(abschan);
 
-      % linear interpolation between peaks
-      c.data(:,k) = interp1q(find(pks_idx(:,k)), ...
-                             abschan(pks_idx), ...
-                             (1:nsamps)');
+      if sum(pks_idx>=2)
+        % linear interpolation between peaks
+        c.data(:,k) = interp1q(find(pks_idx(:,k)), ...
+                               abschan(pks_idx), ...
+                               (1:nsamps)');
+        
+      else
+        % signal is constant or only has 1 peak--no valid interpolation
+        % between peaks
+        c.data(:,k) = NaN(size(c.data(:,k)));
+
+      end
     end
     
    case 'rms', 
