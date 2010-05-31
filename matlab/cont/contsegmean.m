@@ -65,7 +65,11 @@ function [stat] = contsegmean(c, varargin)
    case 2,
     error(['only one of ''meas_count'' and ''meas_interval'' can be ' ...
            'provided']);
+  end
   
+  if isempty(a.segments)
+    warning('No segments provided, using all data');
+    a.segments = [c.tstart c.tend];
   end
   
   % select segments of at least meas_dur
