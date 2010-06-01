@@ -24,6 +24,9 @@ function c = continterp(c,varargin)
   
 % Tom Davidson <tjd@stanford.edu> 2003-2010
 
+  % data integrity check
+  contcheck(c);
+
   a = struct(...
       'timewin',[],...
       'nsamps', [],...
@@ -129,3 +132,5 @@ function c = continterp(c,varargin)
   % crop data more tightly using a.timewin
   c = contwin(c, a.timewin, 'samps_nearest');
 
+  % data integrity check
+  contcheck(c);

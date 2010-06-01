@@ -30,3 +30,6 @@ function c = contmean(c, varargin)
   else
     c.name = a.name;
   end
+  
+  % data integrity check
+  contcheck(c);

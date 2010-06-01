@@ -21,6 +21,9 @@ function c = contresamp(c,varargin)
 %  cout = contresamp(c, 'resample', 1/5);
 
 % Tom Davidson <tjd@alum.mit.edu> 2003-2010 
+
+  % data integrity check
+  contcheck(c);
   
   a = struct(...
       'resample',[],...
@@ -130,4 +133,5 @@ function c = contresamp(c,varargin)
     disp('no resample requested');
   end
   
-  
+  % data integrity check
+  contcheck(c);

@@ -39,6 +39,9 @@ function [c filt] = contfilt(c,varargin)
 
 % Tom Davidson <tjd@alum.mit.edu> 2003-2010
 
+  % data integrity check
+  contcheck(c);
+
   a = struct(...
       'filt',[],...
       'filtopt', [],...
@@ -231,3 +234,5 @@ function c = subf_autoresamp(c,filtopt)
     c = contresamp(c,'resample', res_f);
   end
 
+  % data integrity check
+  contcheck(c);

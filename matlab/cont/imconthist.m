@@ -339,3 +339,5 @@ function c = imconthist(varargin)
              'units (range: %d - %d'], c.tstart, c.tend);
   end
   
+  % data integrity check
+  contcheck(c);

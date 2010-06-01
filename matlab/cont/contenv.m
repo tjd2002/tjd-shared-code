@@ -33,6 +33,9 @@ function c = contenv (c,varargin)
 %
 % Tom Davidson <tjd@alum.mit.edu> 2003-2010 
 
+  % data integrity check
+  contcheck(c);
+  
   a = struct(...
       'envopt',[],...
       'method',[],...
@@ -144,4 +147,5 @@ function c = contenv (c,varargin)
   % update data range
   c = contdatarange(c);
   
-  
+  % data integrity check
+  contcheck(c);

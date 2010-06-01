@@ -64,3 +64,6 @@ function c = contoperator(c1, c2, varargin)
     % concatenate chanlabels with operator string
     c.chanlabels = strcat(c1.chanlabels, a.infix, c2.chanlabels);
   end
+  
+  % data integrity check
+  contcheck(c);

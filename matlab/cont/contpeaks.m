@@ -22,6 +22,9 @@ function [pks_t] = contpeaks(c, varargin)
 
   %%%% input argument parsing/checking
 
+  % data integrity check
+  contcheck(c);
+
   a = struct (...
       'type', 'peaks',...
       'threshfn', [],...

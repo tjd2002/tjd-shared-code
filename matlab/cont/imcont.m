@@ -601,3 +601,5 @@ function [c timestamp ts_syn] = imcont(varargin)
   %%% update data range
   c = contdatarange(c);
   
+  %%% data integrity check
+  contcheck(c);

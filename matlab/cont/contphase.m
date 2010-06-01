@@ -25,6 +25,8 @@ function [cout pks pks_t vals vals_t] = contphase(c, varargin)
 %  -deal with spurious peaks/valleys at start/end of signal (use nbad_*
 %  fields?)
   
+  % data integrity check
+  contcheck(c);
   
   a = struct(...
       'method', 'hilbert',...
@@ -194,8 +196,11 @@ function [cout pks pks_t vals vals_t] = contphase(c, varargin)
     end
   end
   
+  % update units
+  cout.units = 'radians';
+  
   % update data range
   cout = contdatarange(cout);
   
-  % update units
-  cout.units = 'radians';
+  % data integrity check
+  contcheck(c);

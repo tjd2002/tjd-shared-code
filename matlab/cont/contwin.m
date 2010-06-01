@@ -29,3 +29,6 @@ function c = contwin(c, timewin, method)
   end
   
   c = contwinsamp(c, win_samp);
+
+  % data integrity check done in contwinsamp
+  % contcheck(c);

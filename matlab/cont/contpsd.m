@@ -19,6 +19,9 @@ function [P F] = contpsd(c, varargin)
 %  P - power spectral density at frequencies in F
 %  F - frequencies at which power is estimated
    
+  % data integrity check
+  contcheck(c);
+  
   a = struct(...
       'segs', [],...
       'method', 'welch',...

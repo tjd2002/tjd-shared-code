@@ -14,7 +14,10 @@ function [data segs_samp] = contsegdata(c, segs, varargin)
 %  segs_samp - m x 2 array of indexes into c.data for each seg
 
 % Tom Davidson <tjd@stanford.edu> 2003-2010
-  
+
+  % data integrity check
+  contcheck(c);
+
   a = struct(...
       'excludenans', []);
   a = parseArgsLite(varargin,a);

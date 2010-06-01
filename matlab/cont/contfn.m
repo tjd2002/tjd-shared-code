@@ -60,3 +60,6 @@ function c = contfn(c, varargin)
       c.chanlabels{k} = [c.chanlabels{k} a.suffix];
     end
   end
+  
+  % data integrity check
+  contcheck(c);

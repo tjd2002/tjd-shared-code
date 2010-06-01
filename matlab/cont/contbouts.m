@@ -58,6 +58,9 @@ function [bouts th minevpeak minpeak maxevvalley maxvalley extrema extrema_t] = 
 
   %%%% input argument parsing/checking
 
+  % data integrity check
+  contcheck(c);
+  
   a = struct (...
       'timeargunits', 'seconds',...
       'datargunits', 'data', ...

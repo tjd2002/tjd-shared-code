@@ -12,6 +12,9 @@ function c = contdiff(c, varargin)
 %    cdat_fr = contdiff(cdat);
 
 % Tom Davidson <tjd@alum.mit.edu> 2003-2010
+
+  % data integrity check
+  contcheck(c);
   
   a = struct(...
       'N', 1,...
@@ -40,3 +43,6 @@ function c = contdiff(c, varargin)
   for k = 1:length(c.chanlabels),
     c.chanlabels{k} = [c.chanlabels{k} derstr];
   end
+  
+  % data integrity check
+  contcheck(c);

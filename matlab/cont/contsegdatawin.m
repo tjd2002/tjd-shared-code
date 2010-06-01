@@ -11,6 +11,9 @@ function [data segs_samp] = contsegdatawin(c, t, offset, varargin)
 %  data - data selected from c.data, 1 column per channel
 %  segs_samp - m x 2 array of indexes into c.data for each seg
 
+  % data integrity check done in contsegdata
+  % contcheck(c);
+  
   a = struct(...
       'excludenans', []);
   a = parseArgsLite(varargin,a);

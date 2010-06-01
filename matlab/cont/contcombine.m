@@ -72,9 +72,15 @@ function c = contcombine(c, cadd, varargin)
            'for each cdat']);
   end
 
+  % data integrity check
+  contcheck(c);
+  for k = 1:numel(cadd)
+    contcheck(cadd{k})
+  end
+  
   tstart = c.tstart;
   tend = c.tend;
-  for k = 1:length(cadd)
+  for k = 1:numel(cadd)
     tstart = max([tstart cadd{k}.tstart]);
     tend = min([tend cadd{k}.tend]);
   end
@@ -178,3 +184,5 @@ function c = contcombine(c, cadd, varargin)
     
   end
   
+  % data integrity check
+  contcheck(c);

@@ -36,4 +36,8 @@ function newc = contwinsamp(c, win_samp)
   % calc new data range
   newc = contdatarange(newc);
   
-  % max_tserr can't be recalculated, but is an upper bound, so we'll keep it
+  % max_tserr can't be recalculated, but is an upper bound, so we'll keep
+  % it
+  
+  % data integrity check
+  contcheck(c);

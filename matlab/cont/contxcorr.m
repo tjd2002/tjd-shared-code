@@ -10,7 +10,10 @@ function [xc lags_t xc_correct xc_correct_count cdat] = contxcorr(cs, varargin)
 % -maxlags in t?
 
 % Tom Davidson <tjd@stanford.edu> 2003-2010
-  
+
+  % data integrity check
+  contcheck(c);
+
   a = struct(...
       'chans', [],...
       'chanlabels', [],...
