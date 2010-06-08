@@ -1,12 +1,35 @@
 function [ev] = NlxLoadEV(varargin)
 % NlxLoadEV: parses raw digital TTL pulse data from a .nev file
 %
-% 'Filename': Full path to '*.nev' file
-% 'TimeUnits': Time units for output: 'seconds' (default), 'microseconds'
-% 'FindPulses': Parse TTL codes to generate a list of pulse start/end
-%               times for each channel. True (default), false.
+%  ev = NlxLoadEV(filename, [name/value pairs]);
 %
-% Tom Davidson <tjd@stanford.edu>, Apr. 2010
+% Inputs: * = required, -> indicates default
+%   filename - path to '*.nev' file
+%   'TimeUnits' - Time units for output: ->'seconds', 'microseconds'
+%   'FindPulses' - Parse TTL codes to generate a list of pulse start/end
+%       times for each channel. (default true)
+%
+% Outputs: (For an events file file with 16 digital inputs and m events)
+%  ev, a struct with collowing fields,
+%    'times' - 1 x m vector containing times of each event 
+%    'ttls_uint16' - 1 x m vector containing the raw TTL code (unsigned
+%        16-bit integer) for each event. 
+%    'ttls' - 16 x m vector of logicals (true/false) containing the new
+%        state of each digital input at each event time
+%    'pulses' - 1 x 16 cell array of pulse start and end times for each
+%        input channel (m x 2 array)
+%    'timeunits' - the units of all events
+%    'info' a struct with event file headers and NlxLoadEV arguments
+%
+%
+% Example: Get the pulse times from channel 15 of nevents.nev
+%  cd C:\path\to\data
+%  ev = NlxLoadEV('nevents.nev')
+%  laserpulses = ev.pulses{15};
+%
+% See the 'NOTES' section in the code for additional discussion.
+
+% Tom Davidson <tjd@stanford.edu> April 2010
 
 % NOTES:
 %

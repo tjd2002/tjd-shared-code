@@ -1,9 +1,55 @@
-function [cs NumberValid] = NlxLoadCSC(varargin)
-% NlxLoadCSC: gets raw data and headers from .ncs files
+function cs = NlxLoadCSC(varargin)
+% NlxLoadCSC - gets raw data and headers from Neuralynx .ncs files
 %
-% Wrapper for Nlx2MatCSC. Loads data, parses headers, converts units 
+%  csc = NlxLoadCSC(filename, [name/value pairs])
 %
-% Tom Davidson <tjd@stanford.edu> 4/2010
+% Inputs: (* = required, ->indicates default value)
+%  *filename - the name of a .ncs file in the current directory,
+%      or a full path to a .ncs file
+%  'Timewin' - 2-element vector with requested start and end time of data
+%      to import. Use -Inf/Inf to refer to start or end (default [-Inf Inf]
+%      means load all data).
+%  'TimeUnits' - units for both output timestamps, and for inputs like
+%      the 'TimeWin'. (->'seconds', 'microseconds');
+%  'DataUnits' - units for output data. 'mV' or 'V' means to convert the
+%      data to millivolts or volts, using the gain settings from the
+%      file. 'ADbits' means to return the raw values' (->'mV')
+%  'CorrectFilterDelay' - if true, adjust timestamps to account for the
+%      filter delay introduced during recording by the low-cut and high-cut
+%      filters. See NOTES in code for more details. (->true) 
+%  'UnwrapBuffers' - if true, unwrap 512-sample buffers into a single
+%      continuous data vector with a timestamp for each sample (->true)
+%  'PadMissingSamples' - if true, fill in gaps in recording with NaNs (or
+%      other value as specified by 'PadValue'), keeping a smooth sampling
+%      rate. If false, ignore gaps and concatenate data, leaving jumps in
+%      the timestamp (->true)
+%  'PadValue' - scalar value to use to pad missing samples is true (->NaN)
+%  'DataType' - Matlab data type to use for returned data. Defaults to
+%      single-precision floating point. See NOTES in code for more details
+%      (->'single', 'double', 'int16', 'int32')
+%  
+% Outputs:
+%  csc struct with the following fields:
+%   'samples' - requested data samples
+%   'sampleunits' - units for sample data (from 'DataUnits' input)
+%   'samptimes'/'bufftimes' - timestamps for each data sample or each
+%       buffer depending on whether the 'UnwrapBuffers' input was set.
+%   'timeunits' - units for samptimes/bufftimes (from 'TimeUnits' input)
+%   'info' - a struct containing additional information about the file
+%       and the extraction process, including the file header, actual average
+%       sampling rate ('fS_actual'), and the arguments passed to
+%       NlxLoadCSC ('loadargs').
+%
+% Example usage:
+%   Load in from a section of an LFP file from 500 seconds to the end of the
+%   file, without padding any gaps in the recording
+%
+%       csc = NlxLoadCSC('C:\MyData\LFP\LFP1.ncs', 'TimeWin', [500 Inf],...
+%               'PadMissingValues', false)
+%
+% See the 'NOTES' section in the code for additional discussion.
+
+% Tom Davidson <tjd@stanford.edu> April 2010
 
 % NOTES:
 %  -Samples are stored as 16-bit signed integers in the .ncs file, (per
