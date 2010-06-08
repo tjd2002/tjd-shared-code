@@ -392,7 +392,7 @@ cs.info.loadargs = a;
 
 % order struct fields alphabetically
 cs = orderfields(cs);
-
+cs.info = orderfields(cs.info);
 
 
 %% Subfunctions
