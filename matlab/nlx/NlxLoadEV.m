@@ -79,7 +79,6 @@ function [ev] = NlxLoadEV(varargin)
 
 CheckForNlx2Mat('EV');
 
-
 %% set up function input arguments
 p = inputParser;
 p.addRequired('Filename', @sub_isfile); 
