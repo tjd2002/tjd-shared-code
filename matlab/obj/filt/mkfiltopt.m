@@ -73,13 +73,13 @@ switch opt.filttype,
            '(pass/stop or stop/pass)']);
   end
   
- case 'bandpass'
+ case {'bandpass' 'bandstop'}
   if Flen ~= 4,
-    error(['bandpass filters must have 4 design frequencies ' ...
-           '(stop/pass/pass/stop)']);
+    error(['bandpass/bandstop filters must have 4 design frequencies ' ...
+           '(stop/pass/pass/stop, or pass/stop/stop/pass)']);
   end
   
  otherwise
   error(['unrecognized filter ''filttype'': try ''highpass'' ''lowpass'' ' ...
-         '''bandpass'' or ''gausswin''']);
+         '''bandpass'' ''bandstop'' or ''gausswin''']);
 end

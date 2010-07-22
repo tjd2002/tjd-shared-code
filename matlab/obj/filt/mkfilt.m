@@ -16,7 +16,7 @@ function filt = mkfilt(varargin)
 % filt structure:
 %  name: theta, e.g.
 %  Fs: sampling frequency
-%  filttype: 'high'/'low'/'band'
+%  filttype: 'highpass'/'lowpass'/'bandpass'
 %  F: design frequencies
 %  atten_db/ripp_db: arguments
 %  dfilt: discrete filter object we designed
@@ -117,6 +117,9 @@ switch filt.filtopt.filttype
    case 'bandpass'
     filt.dev = [Dstop Dpass Dstop];
     filt.A = [0 1 0];
+   case 'bandstop'
+    filt.dev = [Dpass Dstop Dpass];
+    filt.A = [1 0 1];
   end
 
   try
