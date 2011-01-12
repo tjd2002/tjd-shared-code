@@ -61,8 +61,8 @@ function c = contresamp(c,varargin)
       data_dec = zeros(ceil(nrows/dec_f), ncols, datatype);
       disp('decimating...');
       for col = 1:ncols,
-        % cast to double and back since 2007a's decimate doesn't like single
-        % datatype (per Greg Hale)
+        % cast to double and back since decimate doesn't like single
+        % datatype (since R2007a or earlier)
         data_dec(:,col) = cast(decimate(double(c.data(:,col)),...
                                         dec_f, ...
                                         filtlen,...
@@ -92,7 +92,6 @@ function c = contresamp(c,varargin)
       % rates/times)
       [res_num res_den] = rat(a.resample, a.resample.*a.tol);
       res_f = res_num/res_den;
-      
       filtlen = a.res_filtlen;
       
       % pre-allocate
@@ -121,7 +120,6 @@ function c = contresamp(c,varargin)
       % we're going to mark as bad that many at start and end, then
       % multiply by 
 
-      
     end
       
     % # of unreliable samples in resampled signal = filter length/dec_f
