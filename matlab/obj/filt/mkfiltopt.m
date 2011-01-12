@@ -4,12 +4,12 @@ function opt = mkfiltopt(varargin)
 % Args:
 %  'name': string
 %  'Fs': sampling frequency (optional, can also be provided when making filter)
-%  'filttype': 'highpass'/'lowpass'/'bandpass'/'gausswin'/'rectwin'/'hatwin'
+%  'filttype': 'highpass'/'lowpass'/'bandpass'/'bandstop'/'gausswin'/'rectwin'/'hatwin'
 %
 %  'sd_t': length in time of 1 std. dev of the gaussian window (gausswin/hatwin only)
 %  'length_t': length in time of gaussian/rect./hat window 
 %
-%  Below options only for high-/low-/band-pass filters
+%  Below options only for high-/low-/bandpass/bandstop filters
 %  'F': design frequencies, in Hz (as for firpmord, firpm)
 %       2 freqs for low/highpass (start/end of roll-off)
 %       4 freqs for bandpass (starts and ends of roll-off
@@ -81,5 +81,5 @@ switch opt.filttype,
   
  otherwise
   error(['unrecognized filter ''filttype'': try ''highpass'' ''lowpass'' ' ...
-         '''bandpass'' ''bandstop'' or ''gausswin''']);
+         '''bandpass'' ''bandstop'' ''gausswin'' ''rectwin'' ''hatwin''']);
 end
