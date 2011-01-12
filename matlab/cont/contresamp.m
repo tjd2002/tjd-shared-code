@@ -99,13 +99,15 @@ function c = contresamp(c,varargin)
       data_res = zeros(ceil(nrows*res_f), ncols);
       for col = 1:ncols,
         disp('resampling...');
-        % upfirdn (called by resample) can't handle 'single' type data. bug
-        % filed with mathworks 11/14/06, confirmed by Mathworks as fixed in R14SP2)
-        data_res(:,col) = resample(double(c.data(:,col)),...
-                                   res_num,res_den,...
-                                   filtlen);
+        % resample can't handle 'single' type data. bug
+        % filed with mathworks 11/14/06. R14SP2 and later correctly error
+        % on 'single' inputs)
+        data_res(:,col) = cast(resample(double(c.data(:,col)),...
+                                        res_num,res_den,...
+                                        filtlen),...
+                               datatype);
       end
-      c.data = cast(data_res,datatype); % back to original data type
+      c.data = data_res;
       clear data_res;
       
       % we could also recalc this by determining where new tend is (old tend -
