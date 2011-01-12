@@ -75,14 +75,8 @@ function c = contresamp(c,varargin)
 
       c.data = data_dec;
       clear data_dec;
-      
-      c.samplerate = c.samplerate/dec_f;
 
-      % decimate has 0 group delay (i.e. first point represents same
-      %start time), but since it takes every 'rth' point after the first, the last
-      %sample in the sequence will likely not be from the same time as the
-      %last sample in the input. Recalculate its actual time from the samplerate
-      c.tend = c.tstart + ((size(c.data,1)-1) ./c.samplerate);
+      % samplerate, tstart, and tend are updated below
       
     else
       
@@ -112,21 +106,25 @@ function c = contresamp(c,varargin)
       end
       c.data = data_res;
       clear data_res;
-      
-      % we could also recalc this by determining where new tend is (old tend -
-      % some samples). But for, e.g. 1e7 samples, at around 1kHz, float
-      % error is around 1e-6, i.e. 1 microsecond, and this is way simpler. I
-      % think we're okay.
-      c.samplerate = c.samplerate*res_f;
-      
-      % for resample, the filtlen param is proportional to the length filter
-      % used. doc/help resample say filtlen samples of *input* are used, so
-      % we're going to mark as bad that many at start and end, then
-      % multiply by 
+    
+          
+      % samplerate, tstart, tend updated below
 
     end
-      
-    % # of unreliable samples in resampled signal = filter length/dec_f
+
+    % both 'resample' and 'decimate' have 0 group delay (so tstart
+    % remains the same), but the time of the last sample (tend) changes since it
+    % must occur at an integer number of sample intervals from tstart. We
+    % calculate this time from the size of the data and the new samplerate.
+    % (This method is subject to some float error, but for, e.g. 1E7 samples,
+    % this error is only 1 microsecond, which is acceptable).
+    
+    c.samplerate = c.samplerate*res_f;
+    c.tend = c.tstart + ((size(c.data,1)-1) ./c.samplerate);
+    
+    % the filtlen param is proportional to the length filter used. doc/help
+    % resample say filtlen samples of *input* are used, so we're going to
+    % mark as bad that many at start and end, then multiply by res_f
     c.nbad_start = ceil(c.nbad_start * res_f) + ceil(filtlen * res_f);
     c.nbad_end = ceil(c.nbad_end * res_f) + ceil(filtlen * res_f);
 
