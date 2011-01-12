@@ -95,7 +95,11 @@ function c = contresamp(c,varargin)
       filtlen = a.res_filtlen;
       
       % pre-allocate
-      data_res = zeros(ceil(nrows*res_f), ncols);
+      % (note must use res_num/res_den rather than res_f for this calculation,
+      % since this is what 'resample' uses internally, and in some cases
+      % (e.g. 6724096*47/46) float error would cause the 2 to give a different
+      % answer).
+      data_res = zeros(ceil(nrows*res_num/res_den), ncols, datatype);
       for col = 1:ncols,
         disp('resampling...');
         % resample can't handle 'single' type data. bug
