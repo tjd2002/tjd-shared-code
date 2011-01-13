@@ -108,6 +108,8 @@ end
 % merge multiple channels into one contstruct
 if numel(cdat_cscs)>1
     cdat_cscs = contcombine(cdat_cscs{1}, cdat_cscs(2:end));
+else
+  cdat_cscs = cdat_cscs{1};
 end
 
 % assign name to struct
