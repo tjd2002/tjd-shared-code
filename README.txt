@@ -8,27 +8,30 @@ code.
 
 % Add Tom's shared Matlab code directories to Matlab's path
 
-cd /path/to/thisdir/ 
-path(tjd_shared_matlab_pathdef,path);
+cd /path/to/this/dir/matlab
+path(td_sharedcode_pathdef,path);
 
 *** Directories 
 
 matlab/
+|-nlx
+|  Code to import Neuralynx Cheetah data files into matlab structures
+|
 |-import/
-|  Code to import experimental data into matlab structures.
-|  Many dependencies on Fabian's mwlIO library
+|  Code to import Wilson Lab experimental data into matlab structures.
 |
 |-util/
 |  General-purpose utilities
 |
 |-cont/
-|  Library of signal processing code.
+|  Library of signal processing code (cdats, etc).
 
 
 *** Dependencies:
 
- -Fabian Kloosterman's mwlIO library for reading and creating AD-style
-  data files. (known to work with version in SVN repo as of Aug. 2009)
+ -Fabian Kloosterman's mwlIO library for reading and creating Wilson
+  Lab AD-style data files. (known to work with version in SVN repo as
+  of Aug. 2009)
 
  -Matlab toolboxes. Known to work with the following versions from
   R2007a, and so far everything seems to be working with R2010a, too.
@@ -44,5 +47,5 @@ me at tjd@stanford.edu (or tjd@alum.mit.edu if you are reading this far in
 the future).
 
 Tom
-May 19, 2010
+Jan, 2011
 
