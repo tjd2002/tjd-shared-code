@@ -1,5 +1,5 @@
 function [ev] = NlxLoadEV(varargin)
-% NlxLoadEV: parses digital TTL pulses and event strings from a .nev file
+% NlxLoadEV: parses raw digital TTL pulse data from a .nev file
 %
 %  ev = NlxLoadEV(filename, [name/value pairs]);
 %
@@ -10,16 +10,16 @@ function [ev] = NlxLoadEV(varargin)
 %       times for each channel. (default true)
 %
 % Outputs: (For an events file file with 16 digital inputs and m events)
-%  ev, a struct with the following fields,
-%    'times' - m x 1 vector containing times of each event 
-%    'ttls' - m x 16 vector of logicals (true/false) containing the new
+%  ev, a struct with collowing fields,
+%    'times' - 1 x m vector containing times of each event 
+%    'ttls_uint16' - 1 x m vector containing the raw TTL code (unsigned
+%        16-bit integer) for each event. 
+%    'ttls' - 16 x m vector of logicals (true/false) containing the new
 %        state of each digital input at each event time
 %    'pulses' - 1 x 16 cell array of pulse start and end times for each
-%        digital input channel (m x 2 array)
-%    'strings' - the text string associated with each event (m x 1 cell
-%        array of strings)
-%    'timeunits' - the units of all event times (usually 'seconds')
-%    'info' - a struct with event file headers and NlxLoadEV arguments
+%        input channel (m x 2 array)
+%    'timeunits' - the units of all events
+%    'info' a struct with event file headers and NlxLoadEV arguments
 %
 %
 % Example: Get the pulse times from channel 15 of nevents.nev
@@ -93,7 +93,7 @@ a = p.Results;
 
 
 %% set up extraction parameters
-FieldSelection = [1 0 1 0 1]; % [timestamps eventID TTLs extras evstring]
+FieldSelection = [1 0 1 0 0]; % [timestamps eventID TTLs extras evstring]
 ExtractHeader = 1;
 ExtractMode = 1; % 1-all, 2-range, 3-list, 4-timestamp range, 5-ts list
 ModeArray = []; % blank for mode 1 (all)
@@ -102,7 +102,7 @@ ModeArray = []; % blank for mode 1 (all)
 
 %% run requested extraction
 
-[ev.times nTTLs ev.strings ev.info.rawheader] = Nlx2MatEV(a.Filename, FieldSelection, ExtractHeader, ExtractMode, ModeArray);
+[ev.times nTTLs ev.info.rawheader] = Nlx2MatEV(a.Filename, FieldSelection, ExtractHeader, ExtractMode, ModeArray);
 
 
 %% parse header and calculate some useful values
@@ -113,12 +113,12 @@ ev.info.header = NlxParseHeader(ev.info.rawheader);
 %% convert datatypes and scale as requested
 
 % convert evids to uint16
-ttls_uint16 = uint16(nTTLs);
+ev.ttls_uint16 = uint16(nTTLs);
 
 % convert uint16 to array of logicals
-ev.ttls = false(16, size(ttls_uint16,2)); % preallocate array
+ev.ttls = false(16, size(ev.ttls_uint16,2)); % preallocate array
 for j = 1:16,
-    ev.ttls(j,:) = bitget(ttls_uint16,j);
+    ev.ttls(j,:) = bitget(ev.ttls_uint16,j);
 end
 
 
@@ -175,9 +175,7 @@ ev.info.loadargs = a;
 % order struct fields alphabetically
 ev = orderfields(ev);
 
-% transpose arrays for consistency:
-ev.times = ev.times';
-ev.ttls = ev.ttls';
+
 
 %% Subfunctions
 function tf = sub_isfile(s)
