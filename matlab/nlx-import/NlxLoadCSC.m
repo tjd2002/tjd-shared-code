@@ -48,6 +48,7 @@ function cs = NlxLoadCSC(varargin)
 %               'PadMissingValues', false)
 %
 % See the 'NOTES' section in the code for additional discussion.
+% See also NlxCSC2Cont for batch importing of CSC files to cdat structures
 
 % Tom Davidson <tjd@stanford.edu> April 2010
 
