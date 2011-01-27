@@ -28,6 +28,7 @@ p.addParamValue('CSCDir', '');
 p.addParamValue('CSCFilenames', '*.ncs');
 p.addParamValue('TimeWin', [-Inf Inf], @isnumeric);
 p.addParamValue('Name', [], @ischar);
+p.addParamValue('Force_ignore_ts_errors', false, @islogical);
 p.parse(varargin{:});
 
 % parse inputs
@@ -100,8 +101,13 @@ for j = 1:numel(CSCFiles),
                      'UnwrapBuffers', true, ...
                      'CorrectFilterDelay', true);
     
-    % convert to contstruct (compatible with Tom's viewer and cont* functions)
-    cdat_cscs{j} = imcont('neuralynxCSC', csc);
+    if a.Force_ignore_ts_errors,
+      warning('!!! Using permissive timestamp options, check max_tserr after loading!');
+    end
+    
+    % convert to contstruct (compatible with Tom's viewer and cont* functions)    
+    cdat_cscs{j} = imcont('neuralynxCSC', csc, 'ts_syn_linmode', 'regress', ...
+                          'ts_permissive', a.Force_ignore_ts_errors);
 
 end
 
