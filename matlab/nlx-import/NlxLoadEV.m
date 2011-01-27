@@ -89,6 +89,17 @@ p.parse(varargin{:});
 % parse arguments to arglist
 a = p.Results;
 
+% Neuralynx bug: can't see files containing the '~' character, needs that
+% part of path to be in '/home/user' format
+if a.Filename(1) == '~',
+  oldwd = pwd;
+  cd ('~');
+  a.Filename(1) = [];
+  a.Filename = [pwd '/' a.Filename];
+  cd (oldwd)
+end
+
+
 %% constants
 
 
@@ -101,7 +112,6 @@ ModeArray = []; % blank for mode 1 (all)
 % indexes (mode 2 or 3) are zero-indexed
 
 %% run requested extraction
-
 [ev.times nTTLs ev.strings ev.info.rawheader] = Nlx2MatEV(a.Filename, FieldSelection, ExtractHeader, ExtractMode, ModeArray);
 
 
