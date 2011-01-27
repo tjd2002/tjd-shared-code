@@ -179,10 +179,10 @@ function c = imconthist(varargin)
     end
     
     if usedata
-      if any(size(datas{k} ~= size(evtimes{k})))
-        error(['''data'' lists must be same size as ''evtimes'' lists ' ...
-               '(#%d)']);
-      end
+% $$$       if any(size(datas{k} ~= size(evtimes{k})))
+% $$$         error(['''data'' lists must be same size as ''evtimes'' lists ' ...
+% $$$                '(#%d)']);
+% $$$       end
       if ~isvector(datas{k})
         error('Times must be provided as vectors');
       else
@@ -334,7 +334,7 @@ function c = imconthist(varargin)
     c.data = a.convertdatafun(c.data);
   end
   
-  if ts_per_sec==1 && (c.tend - c.tstart) > (50 * ts_per_sec);
+  if ts_per_sec==1 && (c.tend - c.tstart) > (10000);
     warning(['timestamps reported to be in seconds, but may be in timestamp ' ...
              'units (range: %d - %d'], c.tstart, c.tend);
   end
