@@ -477,8 +477,7 @@ function [c timestamp ts_syn] = imcont(varargin)
   % between the clock used to drive sampling of our signal, and a master
   % 'timestamp' clock (which is also used to synchronize other systems,
   % such as video recording, digital events, sampling across multiple
-  % computers, etc). Both MWL's AD and Neuralynx's Cheetah take this
-  % approach.
+  % computers, etc). Both MWL's AD and Neuralynx's Cheetah have this issue.
 
   %  Put another way, we replace (or model) the observed timestamps with a
   %  linear fit. The errors are usually very small, but before discarding the
