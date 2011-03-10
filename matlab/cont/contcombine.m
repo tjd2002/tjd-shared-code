@@ -1,5 +1,5 @@
 function c = contcombine(c, cadd, varargin)
-% CONTCOMBINE - combine several cont structures, interpolating as needed
+% CONTCOMBINE - combine several cont structs that overlap in time into one
 %
 %  cout = contcombine(c, cadd, [name/value pairs])
 %
