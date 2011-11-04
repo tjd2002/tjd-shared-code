@@ -1,21 +1,24 @@
 Welcome to Tom's shared code repository!
 
-You can either manually add the various subdirectories to your matlab
-path using the 'Path' menu, or you can add the following lines to your
-matlab startup file (e.g. ~/.matlab/startup.m). Be sure to replace
+You can either manually add the 'matlab' subdirectory and all children to 
+your matlab path using the 'Path' menu, or you can add the following lines to 
+your matlab startup file (e.g. ~/.matlab/startup.m). (Be sure to replace
 '/path/to/thisdir' with the path to your checked-out copy of this
-code.
+code.)
 
 % Add Tom's shared Matlab code directories to Matlab's path
-
-cd /path/to/this/dir/matlab
+cd /path/to/thisdir/matlab
 path(td_sharedcode_pathdef,path);
+
 
 *** Directories 
 
 matlab/
-|-nlx
+|-nlx-import
 |  Code to import Neuralynx Cheetah data files into matlab structures
+|
+|-mwl-import
+|  Code for importing Wilson Lab (MIT) data
 |
 |-import/
 |  Code to import Wilson Lab experimental data into matlab structures.
@@ -25,21 +28,22 @@ matlab/
 |
 |-cont/
 |  Library of signal processing code (cdats, etc).
+|
+|-misc/
+  Miscellaneous shared code
 
 
 *** Dependencies:
 
- -Fabian Kloosterman's mwlIO library for reading and creating Wilson
-  Lab AD-style data files. (known to work with version in SVN repo as
-  of Aug. 2009)
+ -mwl-import code requires Fabian Kloosterman's mwlIO library for reading and creating
+  AD-style data files. (known to work with version in SVN repo as of Aug. 2009)
 
- -Matlab toolboxes. Known to work with the following versions from
-  R2007a, and so far everything seems to be working with R2010a, too.
-   Filter Design Toolbox >=4.1
-   Image Processing Toolbox >=5.4
-   Signal Processing Toolbox >=6.7
-   Spline Toolbox  >=3.3.2
-   Statistics Toolbox >=6.0
+ -Matlab toolboxes from R2007a or later:
+   Filter Design Toolbox
+   Image Processing Toolbox
+   Signal Processing Toolbox
+   Statistics Toolbox
+   Spline Toolbox
 
 
 Any questions, or if you'd like to check in bug fixes/improvements, email
