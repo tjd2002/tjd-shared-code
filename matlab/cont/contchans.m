@@ -25,7 +25,7 @@ function [c chans] = contchans(c,varargin)
 %  cdat = contchans(cdat_lfp, 'chanlabels', {'LFP1' 'LFP2'});
 
 % Tom Davidson <tjd@alum.mit.edu> 2003-2010
-  
+
   a = struct(...
       'chans',[],...
       'chanlabels',[],...
@@ -39,29 +39,18 @@ function [c chans] = contchans(c,varargin)
     error('can only provide one of chans and chanlabels');
   end
   
-  % if chans is empty, use all channels (columns)
-  if isempty(a.chans),
+  % if both args are empty, use all channels (columns)
+  if isempty(a.chans) && isempty(a.chanlabels),
     chans = 1:nchans;
+    
+  elseif ~isempty(a.chans),
+      chans = a.chans;
+
   else
-    chans = a.chans;
+      chans = chansfromlabels(c.chanlabels, a.chanlabels);
+      
   end
   
-  % make a 1x1 cell array out of a string
-  if ischar(a.chanlabels) && ~isempty(a.chanlabels),
-    a.chanlabels = {a.chanlabels};
-  end
-
-  % if chanlabels provided, select them,
-  if ~isempty(a.chanlabels),
-    chans = [];
-    if length(unique(c.chanlabels)) ~= length(c.chanlabels),
-      warning([mfilename ':ContLabelsRepeat'], 'repeated chanlabels in cont struct');
-    end
-    for chanstr = a.chanlabels(:)'
-      chans = [chans find(strcmp(chanstr,c.chanlabels))];
-    end
-  end
-
   if a.remove, % invert list
     chans = setdiff(1:nchans,chans);
   end
