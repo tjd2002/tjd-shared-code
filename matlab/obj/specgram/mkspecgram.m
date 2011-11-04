@@ -106,6 +106,11 @@ function [sg cont] = mkspecgram(varargin)
         sgopt.mt_NW,...
         sgopt.mt_detrend);
   end
+  
+  
+  if sgopt.multiply_by_f,
+      sg.b = bsxfun(@times, sg.b, sg.f);
+  end
 
   % actual time widths of window/overlap (useful for image/surf plot offsets)
   sg.t_window = window_samp / samplerate;
