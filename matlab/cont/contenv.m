@@ -48,10 +48,12 @@ function c = contenv (c,varargin)
     error('Can''t provide both ''method'' and ''envopt'' arguments')
   end
   
-  if isempty(a.method)
+  if isempty(a.envopt) && isempty(a.method),
     disp('no envelope method requested, using mkenvopt defaults')
     a.envopt = mkenvopt;
-  else
+  end
+  
+  if ~isempty(a.method)
     a.envopt = mkenvopt('method', a.method, ...
                         'rms_window_t', a.rms_window_t);
   end
