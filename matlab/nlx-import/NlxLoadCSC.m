@@ -112,6 +112,10 @@ function cs = NlxLoadCSC(varargin)
 %   (default NaN). 
 
 % TODO:
+%  -test for Cheetah version, warn if out of date
+%  -handle new features of Cheetah 5.5:
+%    -automatic delay compensation (disabled by default, thankfully)
+%    -field to say if filters are being applied
 %  -missing timestamps cleanup
 %    -if requested start/end time is in a gap?
 %    -if requested timewin is completely within a gap? use fS_header?
@@ -178,7 +182,11 @@ finfo = dir(a.Filename);
 nrecords = (finfo.bytes - hdr_bytes) ./ hdr.RecordSize;
 
 % get just the first/last buffer timestamp (note zero-indexed)
-[buff_tsrange] = Nlx2MatCSC(a.Filename, [1 0 0 0 0], false, 3, [0 nrecords-1]);
+
+% mode 3 not working in windows as of v. 4.1.3, so load using mode 1 (load all) instead 
+%[buff_tsrange] = Nlx2MatCSC(a.Filename, [1 0 0 0 0], false, 3, [0 nrecords-1]);
+buff_tsrange = Nlx2MatCSC(a.Filename, [1 0 0 0 0], false, 1);
+buff_tsrange = buff_tsrange([1 end]);
 
 % Empty timewin means select all times
 if isempty(a.TimeWin),
