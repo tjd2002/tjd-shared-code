@@ -25,12 +25,12 @@ function [data segs_samp] = contsegdata(c, segs, varargin)
     a.excludenans = true;
   end
   
-  % select segs in range
-  goodsegs = segs(inseg([c.tstart c.tend], segs),:);
-  if numel(goodsegs) ~= numel(segs)
-    warning('ignoring segs outside of cont range');
-    segs = goodsegs;
+  % select segs in range 
+  goodsegs = seg_and([cont.tstart cont.tend], segs);
+  if numel(goodsegs) ~= numel(segs) || any(goodsegs(:)~=segs(:))
+      warning('segs clipped to cdat time range');
   end
+  segs = goodsegs;
   
   % get indexes into c.data
   segs_samp = round((segs - c.tstart) * c.samplerate)+1;
