@@ -26,7 +26,7 @@ function [data segs_samp] = contsegdata(c, segs, varargin)
   end
   
   % select segs in range 
-  goodsegs = seg_and([cont.tstart cont.tend], segs);
+  goodsegs = seg_and([c.tstart c.tend], segs);
   if numel(goodsegs) ~= numel(segs) || any(goodsegs(:)~=segs(:))
       warning('segs clipped to cdat time range');
   end
