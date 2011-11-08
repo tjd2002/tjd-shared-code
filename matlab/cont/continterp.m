@@ -1,7 +1,7 @@
 function c = continterp(c,varargin)
 % CONTINTERP resample and interpolate cont data at specified sample times
 %
-%  c = continterp(c,[name/value pairs])
+%  cout = continterp(c,[name/value pairs])
 %
 % The sample times at which to interpolate the data are specified by
 % providing a start/end time, and either a total number of samples, or a
@@ -10,9 +10,11 @@ function c = continterp(c,varargin)
 % Inputs: (* = required)
 %  *c - cont struct to be interpolated
 %  'timewin' - start/end time of resulting cdat (default same as input)
-%  *'nsamps'/'samplerate' - number of samples or sampling rate for cout.
+%  *'nsamps'/'samplerate' - number of samples or sampling rate (in Hz) for cout.
 %  'method', interpolation method ({'cubic'}, 'spline', 'linear', 'nearest' etc)
 %      (NB: spline will propagate NaNs through all data)
+%
+%  Uncommon optional inputs:
 %  'resampbeforeinterp', should we resample near new samplerate before
 %      interpolating? This is important to avoid aliasing, but when a signal
 %      contains short stretches of data surrounded by NaN/Inf values, it
@@ -20,7 +22,7 @@ function c = continterp(c,varargin)
 %      'true', except that for 'nearest' interpolation, it is always false).
 %
 %  Outputs:
-%  c - cont struct with new timebase
+%  cout - cont struct with new timebase
   
 % Tom Davidson <tjd@stanford.edu> 2003-2010
 
