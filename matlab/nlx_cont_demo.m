@@ -27,11 +27,13 @@ fopt_beta = mkfiltopt('name', 'beta', 'filttype', 'bandpass', 'F', [11 15 30 35]
 
 
 %% plot filtered and unfiltered vs time
+c = cdat_lfp5_100s;
+contts = linspace(c.tstart, c.tend, size(c.data,1));
 
 figure;
 hold on;
-plot(contts(cdat_lfp5_100s),cdat_lfp5_100s.data, 'k');
-plot(contts(cdat_lfp5_100s_Fbeta),cdat_lfp5_100s_Fbeta.data, 'r');
+plot(contts,c.data, 'k');
+plot(contts,cdat_lfp5_100s_Fbeta.data, 'r');
 
 %% create binned time data series
 %c = imconthist([name/value pairs])
