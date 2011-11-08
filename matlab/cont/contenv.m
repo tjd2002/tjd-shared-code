@@ -64,7 +64,7 @@ function c = contenv (c,varargin)
 
   switch(a.envopt.method)
    case 'hilbert'
-    suffix = 'env_hilb';
+    suffix = '_env_hilb';
 
     if any(isnan(c.data))
       error(['Cannot calculate Hilbert transform on data with NaNs; fix ' ...
@@ -85,7 +85,7 @@ function c = contenv (c,varargin)
     end
     
    case 'peaks',
-    suffix = 'env_pks';
+    suffix = '_env_pks';
 
     for k = 1:nchans,
       % rectify the channel
