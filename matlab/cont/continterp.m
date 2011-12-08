@@ -61,8 +61,9 @@ function c = continterp(c,varargin)
   if ((~isempty(a.nsamps) && a.nsamps == size(c.data,1)) || ...
       (~isempty(a.samplerate) && a.samplerate == c.samplerate)) ...
         && ...
-        a.timewin(1) == c.tstart &&...
-        a.timewin(2) == c.tend
+        (isempty(a.timewin) || ... 
+        (a.timewin(1) == c.tstart &&...
+         a.timewin(2) == c.tend))
     disp('No interpolation needed.');
     return;
   end
@@ -131,7 +132,13 @@ function c = continterp(c,varargin)
   c.nbad_start = NaN;
   c.nbad_end = NaN;
   
-  % crop data more tightly using a.timewin
+  % avoid running off end of data if there was no padding available above
+  % (e.g. when interping entire contstruct)
+  if a.timewin(2)>c.tend,
+      a.timewin(2) = c.tend;
+  end
+  
+  % recrop data more tightly using a.timewin
   c = contwin(c, a.timewin, 'samps_nearest');
 
   % data integrity check
