@@ -131,6 +131,12 @@ function c = continterp(c,varargin)
   c.nbad_start = NaN;
   c.nbad_end = NaN;
   
+  % Avoid attempting to crop past end of data in case where there was no
+  % padding data (e.g. when interping to end of data)
+  if a.timewin(2) > c.tend,
+      a.timewin(2) = c.tend;
+  end
+  
   % crop data more tightly using a.timewin
   c = contwin(c, a.timewin, 'samps_nearest');
 
