@@ -4,7 +4,8 @@ function opt = mkfiltopt(varargin)
 % Args:
 %  'name': string
 %  'Fs': sampling frequency (optional, can also be provided when making filter)
-%  'filttype': 'highpass'/'lowpass'/'bandpass'/'bandstop'/'gausswin'/'rectwin'/'hatwin'
+%  'filttype':
+%  'highpass'/'lowpass'/'bandpass'/'bandstop'/'gausswin'/'rectwin'/'hatwin'/'coeffs'
 %
 %  'sd_t': length in time of 1 std. dev of the gaussian window (gausswin/hatwin only)
 %  'length_t': length in time of gaussian/rect./hat window 
@@ -29,6 +30,7 @@ opt = struct(...
     'length_t',[],...
     'atten_db', -50,...
     'ripp_db', 1,...
+    'coeffs', [],...
     'datatype', 'single' ...
     );
 
@@ -50,6 +52,10 @@ end
 
 Flen = length(opt.F);
 switch opt.filttype,
+ case 'coeffs',
+  if isempty(opt.coeffs),
+    error('''coeffs'' must be provided for filter of type ''coeffs''');
+  end
  case 'gausswin'
   if isempty(opt.length_t) && isempty(opt.sd_t);
     error('''length_t'' or ''sd_t'' must be provided for filters of type ''gausswin''');

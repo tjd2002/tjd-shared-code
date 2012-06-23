@@ -63,6 +63,9 @@ end
 disp(['designing filter: ''' filt.filtopt.name '''...']);
 
 switch filt.filtopt.filttype
+ case 'coeffs',
+   fB = filt.filtopt.coeffs;
+    
  case 'gausswin',
   
   if ~isempty(filt.filtopt.length_t),
