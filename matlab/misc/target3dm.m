@@ -1,4 +1,4 @@
-function [B R] = target3dm(target, tilt, rot, tiltdir, quiet); 
+function [R B] = target3dm(target, tilt, rot, tiltdir, quiet); 
 % TARGET3DM: reach a target using a tilted, rotated stereotax
 %
 % x0,y0,z0 = Animal ML, AP, DV (same order/sign as stereotax: 
