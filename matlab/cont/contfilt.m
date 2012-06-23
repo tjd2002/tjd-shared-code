@@ -49,6 +49,7 @@ function [c filt] = contfilt(c,varargin)
       'newchanlabels',[],...
       'autoresample', [],...
       'nonlinphaseok', false,...
+      'nodelaycorrect', false,...
       'cache', []);
   
   a = parseArgsLite(varargin,a);
@@ -74,7 +75,7 @@ function [c filt] = contfilt(c,varargin)
     
     filt = a.filt;
     
-    c = subf_contfilter(c,filt);
+    c = subf_contfilter(c,filt,a);
     
     if a.autoresample,
       c = subf_autoresamp(c,filt.filtopt);
@@ -92,7 +93,7 @@ function [c filt] = contfilt(c,varargin)
     % see if we already have an appropriate filter in the cache
     filt = mkfilt('filtopt',a.filtopt, 'cache', a.cache);
     
-    c = subf_contfilter(c,filt);
+    c = subf_contfilter(c,filt,a);
   
   end
                   
@@ -113,7 +114,7 @@ function [c filt] = contfilt(c,varargin)
     end
   end
   
-function c = subf_contfilter(c,filt)
+function c = subf_contfilter(c,filt,a)
   
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 % filter data
@@ -152,7 +153,7 @@ function c = subf_contfilter(c,filt)
   end
   
   % linear phase (can do one-way filt, then correct for grpdelay)
-  if ~mod(filtlen,2),
+  if ~mod(filtlen,2) && ~a.nodelaycorrect,
     warning(['filter length is even, group delay compensation will be ' ...
              'off by 1/2 sample']); %#ok
   end
@@ -176,17 +177,22 @@ function c = subf_contfilter(c,filt)
   end
   
   
-  % correct for group delay, zero-pad end (see nbad, below)
-  Gd = filt.dfilt.order/2;
-  for k = 1:nchans
-    c.data(1:end-Gd,k) = c.data(Gd+1:end,k);
-    c.data(end-Gd+1:end,k) = 0;
+  if ~a.nodelaycorrect
+    
+    % correct for group delay, zero-pad end (see nbad, below)
+    Gd = filt.dfilt.order/2;
+    for k = 1:nchans
+      c.data(1:end-Gd,k) = c.data(Gd+1:end,k);
+      c.data(end-Gd+1:end,k) = 0;
+    end
+    
+    % indicate which samples are potentially bad
+    c.nbad_end = c.nbad_end + filtlen;
   end
   
-  % indicate which samples are potentially bad
+  % bad even if no group delay correction
   c.nbad_start = c.nbad_start + filtlen;
-  c.nbad_end = c.nbad_end + filtlen;
-  
+    
   % cast it back to single, or whatever (necessary?)
   c.data = cast(c.data, dataclass);
   
