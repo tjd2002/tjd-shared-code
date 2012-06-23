@@ -1,7 +1,7 @@
-function [pks_t] = contpeaks(c, varargin)
-% CONTPEAKS - find times of peaks, valleys, or zero-crossings
+function [pks_t pks_idx] = contpeaks(c, varargin)
+% CONTPEAKS - find times/indexes of peaks, valleys, or extrema
 %
-% peaks_t = contpeaks(c, [name/value pairs]
+% [pks_t pks_idx] = contpeaks(c, [name/value pairs]
 %
 % Args:
 %  c - cont structure (or any structure with a 'data' field and optionally a
@@ -15,7 +15,8 @@ function [pks_t] = contpeaks(c, varargin)
 %  'segs' - only return peaks in specified time segments
 %
 % Outputs:
-%  peaks_t -  cell array of peak times, one cell per channel
+%  pks_t -  cell array of peak times, one cell per channel
+%  pks_idx - cell array of indexes of peaks, one cell per channel
 
 % Tom Davidson <tjd@stanford.edu> 2003-2010
   
@@ -60,11 +61,15 @@ function [pks_t] = contpeaks(c, varargin)
   end
     
   for k = 1:nchans
+    pks_idx{k} = find(pkidx(:,k));
+
     % convert indexes to times
-    pks_t{k} = (find(pkidx(:,k))-1)./c.samplerate + c.tstart;
+    pks_t{k} = (pks_idx{k}-1)./c.samplerate + c.tstart;
     
     if ~isempty(a.segs)
-      pks_t{k} = pks_t{k}(inseg(a.segs, pks_t{k}));
+      goodi = (inseg(a.segs, pks_t{k}));
+      pks_t{k} = pks_t{k}(goodi);
+      pks_idx{k} = pks_idx{k}(goodi);
     end 
   
   end
