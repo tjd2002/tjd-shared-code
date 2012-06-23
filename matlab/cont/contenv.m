@@ -93,7 +93,7 @@ function c = contenv (c,varargin)
       % find local maxima (peaks)
       pks_idx = localmax(abschan);
 
-      if sum(pks_idx>=2)
+      if sum(pks_idx)>=2
         % linear interpolation between peaks
         c.data(:,k) = interp1q(find(pks_idx(:,k)), ...
                                abschan(pks_idx), ...
