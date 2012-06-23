@@ -23,11 +23,11 @@ try
     p = pwd;
     
   elseif ~isempty(dir(rel_path)), %file
-    [pathstr, name, ext, versn] = fileparts(rel_path);
+    [pathstr, name, ext] = fileparts(rel_path);
     if ~isempty(pathstr)
       cd(pathstr);
     end
-    p = fullfile(pwd, [name ext versn]);
+    p = fullfile(pwd, [name ext]);
   
   else % not a dir or a file
     error(['Not a valid directory or file: ' rel_path]);
