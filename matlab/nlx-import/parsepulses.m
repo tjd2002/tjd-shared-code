@@ -8,6 +8,8 @@ function [out] = parsepulses(varargin)
 % 'ev': struct returned from NlxLoadEV
 % 'chans': which channel to use
 % 'minboutgap': gap to separate bouts
+% 'tol': tolerance factor (def 10000)
+% 'traintol': tolerance factor for stdev of train start times (def 1000)
 %
 %
 % TODO
