@@ -46,6 +46,9 @@ function [c timestamp ts_syn] = imcont(varargin)
 %    Effect on other inputs:
 %     'timeunits' = 'seconds'
 %
+%   .nex file (as output from TDT), depends on readNexFile.m from Plexon
+%    'nexfile' - filename of .nex file
+%
 %   Wilson Lab (MIT) .eeg file - Note: depends on Fabian's mwlIO library
 %   *'eegfile'/'mwlIOeegfh' = filename/filehandle (from mwlopen) of .eeg file
 %    'chans' - vector of channels to use (import all by default)
@@ -130,6 +133,7 @@ a = struct(...
   'timewin', [],...
   'neuralynxCSC', [],...
   'abffile', [],...
+  'nexfile', [],...
   'abfchannelnames',[],...
   'name', '',...
   'data', [],...
@@ -190,6 +194,8 @@ if ~isempty(a.abffile),
   mode = [mode {'abf'}];
 end
 
+if ~isempty(a.nexfile),
+  mode = [mode {'nex'}];
 end
 
 if ~isempty(a.buffdata),
@@ -510,6 +516,92 @@ switch mode
     % Don't do additional processing--it was all done in call to imcont
     return;
     
+    %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+    % Import Plexon .nex file (as output by TDT)
+  case 'nex'
+    
+    try
+      % readNexFile pops up a file dialog if you call it with no filename
+      readNexFile('ThereBetterNotBeAFileWithThisNameOrElse!!221');
+    catch ME
+      if strcmp(ME.identifier, 'MATLAB:UndefinedFunction');
+        error(['Importing of .nex files requires that you have readNexFile on your path.' 'Download it from Plexon.com.']);
+      end
+    end
+
+    if ~exist(a.nexfile, 'file') || exist(a.nexfile, 'dir') 
+      error(['Requested file ''' a.nexfile ''' does not exist']);
+    end
+      
+    % read entire nex file (no facility to load channels or time windows)
+    nex_d = readNexFile(a.nexfile);    
+    
+    nwaves = numel(nex_d.waves);
+    
+    %%% overwrite info from .abf header from imcont inputs
+    if ~isempty(a.chanlabels),
+      cl = a.chanlabels;
+    else
+      for k = 1:nwaves
+        cl{k} = nex_d.waves{k}.name;
+      end
+    end
+    
+    if ~isempty(a.dataunits)
+      error('Data units already specified in .nex file');
+    end
+      
+    if ~isempty(a.data),
+      error('Data already specified in .nex file.');
+    end
+    
+    if ~isempty(a.timestamp) || ~isempty(a.timestamp_ends) || ~isempty(a.timeunits),
+      error('Time (with units) already specified in .nex file.');
+    end
+    
+    %% All other parameters are passed through as-is to the next imcont call
+
+    % each 'waves' has its own timestamps, so call imcont then contcombine
+    for k = 1:nwaves
+      
+      w = nex_d.waves{k};
+
+      % don't do anything with the .ADtoMV or .MVofffset fields--these 
+      % corrections were already applied by readNexFile
+      
+      % call imcont recursively with raw timestamps/data options
+      ctmp(k) = imcont(...
+        'timestamp', w.timestamps,...
+        'buffdata', permute(w.waveforms, [2 1 3]), ...
+        'invert', a.invert, ...
+        'chanlabels', cl,...
+        'dataunits', 'mV',...
+        ...
+        'timewin', a.timewin,...
+        'name', a.name,...
+        'chanvals', a.chanvals,...
+        'convertdatafun', a.convertdatafun,...
+        'ts_syn_linmode', a.ts_syn_linmode,...
+        'ts_permissive', a.ts_permissive,...
+        'allowable_tserr_samps', a.allowable_tserr_samps);
+      
+      % save nex-specific info (but not a second copy of the data)
+      nex_hdr_waves{k} = rmfield(w, {'timestamps', 'waveforms'});
+    end
+
+    if numel(ctmp)>1
+      c = contcombine(ctmp(1), ctmp(2:end));
+    else
+      c = ctmp;
+    end
+    
+    % save nex-specific info (but not a second copy of the data)
+    c.nex_hdr = rmfield(nex_d, 'waves');
+    c.nex_hdr_waves = nex_hdr_waves;
+    
+    % Don't do additional processing--it was all done in call to imcont
+    return;
+
     
     %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
     % Import raw data/timestamp lists
