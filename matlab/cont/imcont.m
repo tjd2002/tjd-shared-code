@@ -25,6 +25,12 @@ function [c timestamp ts_syn] = imcont(varargin)
 %    Effect on other inputs:
 %     'timeunits' - defaults to 'seconds'
 %
+%   Raw Data in buffers
+%    *'buffdata' - numeric data (m x b x n, each row a buffer)
+%     'timestamp' - time at first sample of each buffer (n x 1)
+%    Effect on other inputs:
+%     'timeunits' - defaults to 'seconds'
+%
 %   Neuralynx .csc data struct, as imported by Tom's NlxLoadCSC function
 %   *'neuralynxCSC' - struct from NlxLoadCSC
 %    Effect on other inputs:
@@ -127,6 +133,7 @@ a = struct(...
   'abfchannelnames',[],...
   'name', '',...
   'data', [],...
+  'buffdata', [],...
   'timestamp', [],...
   'timestamp_ends', [],...
   'timeunits', '',...
@@ -183,9 +190,16 @@ if ~isempty(a.abffile),
   mode = [mode {'abf'}];
 end
 
-if ~isempty(a.data) || ~isempty(a.timestamp),
-  mode = {'raw'};
 end
+
+if ~isempty(a.buffdata),
+  mode = [mode 'rawbuff'];
+end
+
+if ~isempty(a.data),
+  mode = [mode 'raw'];
+end
+
 
 switch numel(mode)
   case 0
@@ -525,8 +539,38 @@ switch mode
     else
       error('No time information provided; can''t create cont struct.');
     end
-end
 
+    %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+    % Import raw buffered data/timestamp lists
+  case 'rawbuff'
+
+    [nrecords, recsize, ~] = size(a.buffdata);
+    
+    buff_t = a.timestamp;
+    
+    if max(diff(buff_t)) > 1.1 * min(diff(buff_t)),
+      warning('Timestamps may contain gaps (recording stopped?)'); %#ok
+    end
+
+    % select channels and reshape data into nsamples x nchans array
+    c.data = a.buffdata;
+    if ~isempty(a.chans),
+      c.data = c.data(:,:,a.chans);
+    end
+    nchans = size(c.data,3);
+    
+    c.data = permute(c.data,[2 1 3]); % get semples columnwise for reshape
+    c.data = reshape(c.data, nrecords*recsize,nchans);
+
+    timestamp = a.timestamp; 
+    
+     % default to seconds
+    if ~isempty(a.timeunits)
+      timeunits = a.timeunits;
+    else
+      timeunits = 'seconds';
+    end
+end
 
 %% Common processing for all input modes
 
