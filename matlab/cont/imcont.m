@@ -24,7 +24,6 @@ function [c timestamp ts_syn] = imcont(varargin)
 %    'timestamp_ends' - time of first/last sample
 %    Effect on other inputs:
 %     'timeunits' - defaults to 'seconds'
-%     'invert' defaults to false
 %
 %   Neuralynx .csc data struct, as imported by Tom's NlxLoadCSC function
 %   *'neuralynxCSC' - struct from NlxLoadCSC
@@ -40,14 +39,13 @@ function [c timestamp ts_syn] = imcont(varargin)
 %    'chans' - vector of channel numbers to use (import all by default)
 %    Effect on other inputs:
 %     'timeunits' = 'seconds'
-%     'invert' = defaults to false
 %
 %   Wilson Lab (MIT) .eeg file - Note: depends on Fabian's mwlIO library
 %   *'eegfile'/'mwlIOeegfh' = filename/filehandle (from mwlopen) of .eeg file
 %    'chans' - vector of channels to use (import all by default)
 %    Effect on other inputs:
 %     'timeunits' = 'MWL_timestamps'
-%     'invert' - (default: true)
+%     'invert' - defaults to true
 %
 %   E.pos struct (as used in Tom's expt struct)
 %   *'epos' - the epos struct
@@ -55,7 +53,6 @@ function [c timestamp ts_syn] = imcont(varargin)
 %       array of strings)
 %    Effect on other inputs:
 %     'timeunits' - defaults to 'seconds'
-%     'invert' - defaults to false
 %
 %  Shared Inputs: (may be implied/overwritten depending on import type, above)
 %   'invert' - Whether to invert the sign of the data. (default: false)
@@ -66,7 +63,7 @@ function [c timestamp ts_syn] = imcont(varargin)
 %   'chanlabels'- text labels for channels.
 %   'dataunits'- defaults to '' (attempts to convert to mV if possible).
 %   'timeunits'- 'MWL_timestamps', 'microseconds' or 'seconds'.
-
+%
 %   'ts_syn_linmode' - method for fitting a linear samplerate to observed
 %       sample times. 'ends' (the default) simply linearizes from first to last
 %       observed timestamp. 'regress' performs a least-squares linear
@@ -628,7 +625,7 @@ samprange = [((tsi_range(1)-1)*recsize)+1 ... % end of prev record + 1
 timestamp = timestamp(tsi_range(1):tsi_range(2));
 c.data = c.data(samprange(1):samprange(2),:);
 
-%%% try to catch large gaps in data (without yet eknowing the samplerate)
+%%% try to catch large gaps in data (without yet knowing the samplerate)
 dts = diff(timestamp);
 gapi = find (dts > 1.5*median(dts));
 if ~isempty(gapi)
