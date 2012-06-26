@@ -193,9 +193,9 @@ function c = contcombine(c, cadd, varargin)
     % keep max timestamp error
     c.max_tserr = max(c.max_tserr, cadd{k}.max_tserr);
 
-    % hard to make sense of once we've changed time base for some channels
-    c.nbad_start = NaN;
-    c.nbad_end = NaN;
+    % if any channel has bad samples, mark whole row bad
+    c.nbad_start = max(c.nbad_start, cadd{k}.nbad_start);
+    c.nbad_end = max(c.nbad_end, cadd{k}.nbad_end);
     
     % concatenate names
     newname = [newname '&' cadd{k}.name];
