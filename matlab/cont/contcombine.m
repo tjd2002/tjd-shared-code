@@ -14,8 +14,8 @@ function c = contcombine(c, cadd, varargin)
 %
 % Inputs: (* means required, -> indicates default value)
 %   * c - a cont struct to which the others are added
-%   * cadd - the cont struct or structs (in a cell array) to be combined
-%       with c.
+%   * cadd - the cont struct or structs (in an array or cell array) to be 
+%       combined with c.
 %   'name' - new name for cout
 %   'timewin' - requested time range for cout. Actual time range will be the
 %       overlap of timewin and the times of all provided structs (default
@@ -58,7 +58,9 @@ function c = contcombine(c, cadd, varargin)
   % validate inputs
   
   if isstruct(cadd), 
-    cadd = {cadd};
+    % accept array of structs, but need to use cell array internally as
+    % some cdats may have different fields.
+    cadd = num2cell(cadd);
   end
   
   if ~isempty(cadd) && ~iscell(cadd)
