@@ -137,8 +137,19 @@ function c = contcombine(c, cadd, varargin)
   a.nsamps = size(c.data, 1);
   samplerate = [];
   
+  % pre-allocate data array
+
+  disp(sprintf('Pre-allocating memory for combined cdat...', k, length(cadd)));
+  dtype = class(c.data);
+  newdat = zeros(a.nsamps, numel(cadd)+1, dtype);
+  newdat(:,1) = c.data;
+  c.data = newdat;
+  clear newdat;
+  
   for k = 1:length(cadd)
-    
+
+    disp(sprintf('Combining cdat %d of %d...', k+1, numel(cadd)+1));
+
     if all(timewin ~= [cadd{k}.tstart cadd{k}.tend]) ||...
           (~isempty(samplerate) && samplerate ~= cadd{k}.samplerate) ||...
           (~isempty(a.nsamps) && a.nsamps ~= size(cadd{k}.data,1)),
@@ -149,7 +160,7 @@ function c = contcombine(c, cadd, varargin)
     end
     
     % concatenate data
-    c.data = [c.data cadd{k}.data];
+    c.data(:,k) = cadd{k}.data;
     
     if ~isempty(c.chanvals) && ~isempty(cadd{k}.chanvals),
       c.chanvals = [c.chanvals cadd{k}.chanvals];
