@@ -144,18 +144,24 @@ function c = contcombine(c, cadd, varargin)
   
   % pre-allocate data array
 
-  disp(sprintf('Pre-allocating memory for combined cdat...', k, length(cadd)));
-  dtype = class(c.data);
-  newdat = zeros(a.nsamps, numel(cadd)+1, dtype);
-  newdat(:,1) = c.data;
-  c.data = newdat;
-  clear newdat;
+  nchans_new = size(c.data,2);
+  for k = 1:numel(cadd)
+    chnos_add{k} = nchans_new + [1:size(cadd{k}.data,2)];
+    nchans_new = chnos_add{k}(end);
+  end
   
-  for k = 1:length(cadd)
 
-    disp(sprintf('Combining cdat %d of %d...', k+1, numel(cadd)+1));
+  % pre-allocate: expand c.data to new size 
+  disp(sprintf('Pre-allocating memory for combined %d-channel cdat...', nchans_new));
+  c.data(end,nchans_new) = 0; % (pads with zeros)
   
   newname = c.name; 
+  
+  for k = 1:numel(cadd)
+
+    chnos = chnos_add{k};
+    
+    disp(sprintf('Combining cadd # %d (of %d) to channel(s) # %s...', k, numel(cadd), num2str(chnos)));
 
     if all(timewin ~= [cadd{k}.tstart cadd{k}.tend]) ||...
           (~isempty(samplerate) && samplerate ~= cadd{k}.samplerate) ||...
@@ -167,23 +173,22 @@ function c = contcombine(c, cadd, varargin)
     end
     
     % concatenate data
-    c.data(:,k) = cadd{k}.data;
+    c.data(:,chnos) = cadd{k}.data;
     
     if ~isempty(c.chanvals) && ~isempty(cadd{k}.chanvals),
-      c.chanvals = [c.chanvals cadd{k}.chanvals];
+      c.chanvals(chnos) = cadd{k}.chanvals;
     else
-      c.chanvals = [];
+      c.chanvals(chnos) = NaN;
     end
     
     if ~isempty(c.chanlabels) && ~isempty(cadd{k}.chanlabels),
-      c.chanlabels = [c.chanlabels cadd{k}.chanlabels];
+      c.chanlabels(chnos) = deal(cadd{k}.chanlabels);
     else
-      c.chanlabels = [];
+      c.chanlabels(chnos) = deal({[]});
     end
     
     % get extent of data
-    c.datarange = vertcat(c.datarange,...
-                          cadd{k}.datarange);
+    c.datarange(chnos,:) = cadd{k}.datarange;
 
     % keep max timestamp error
     c.max_tserr = max(c.max_tserr, cadd{k}.max_tserr);
