@@ -16,6 +16,7 @@ function c = contcombine(c, cadd, varargin)
 %   * c - a cont struct to which the others are added
 %   * cadd - the cont struct or structs (in a cell array) to be combined
 %       with c.
+%   'name' - new name for cout
 %   'timewin' - requested time range for cout. Actual time range will be the
 %       overlap of timewin and the times of all provided structs (default
 %       is to use largest overlapping time window across structs).
@@ -45,6 +46,7 @@ function c = contcombine(c, cadd, varargin)
 %  Tom Davidson <tjd@alum.mit.edu> 2003-2010 
 
   a = struct('timewin', [],...
+             'name', [],...
              'match_first', false,...             
              'nsamps', [],...
              'samplerate', [],...
@@ -53,7 +55,8 @@ function c = contcombine(c, cadd, varargin)
   
   a = parseArgsLite(varargin,a);
   
-  %%% interp cdats to be combined so they have the same time basis as 'c'
+  % validate inputs
+  
   if isstruct(cadd), 
     cadd = {cadd};
   end
@@ -149,6 +152,8 @@ function c = contcombine(c, cadd, varargin)
   for k = 1:length(cadd)
 
     disp(sprintf('Combining cdat %d of %d...', k+1, numel(cadd)+1));
+  
+  newname = c.name; 
 
     if all(timewin ~= [cadd{k}.tstart cadd{k}.tend]) ||...
           (~isempty(samplerate) && samplerate ~= cadd{k}.samplerate) ||...
@@ -186,13 +191,19 @@ function c = contcombine(c, cadd, varargin)
     c.nbad_end = NaN;
     
     % concatenate names
-    c.name = [c.name '&' cadd{k}.name];
+    newname = [newname '&' cadd{k}.name];
   
     % keep nlx_info around if it's present
     try
         c.nlx_info(k+1) = cadd{k}.nlx_info;
     end % ignore caught errors
     
+  end
+  
+  if ~isempty(a.name)
+    c.name = a.name;
+  else
+    c.name = newname;
   end
   
   % data integrity check
