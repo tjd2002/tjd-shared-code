@@ -45,6 +45,10 @@ function c = contcombine(c, cadd, varargin)
 
 %  Tom Davidson <tjd@alum.mit.edu> 2003-2010 
 
+% TODO:
+%  -handle datatype differences? (add a convertdatafun, and by default
+%   use the datatype of c).
+
   a = struct('timewin', [],...
              'name', [],...
              'match_first', false,...             
