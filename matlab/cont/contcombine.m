@@ -206,7 +206,7 @@ function c = contcombine(c, cadd, varargin)
   
     % keep nlx_info around if it's present
     try
-        c.nlx_info(k+1) = cadd{k}.nlx_info;
+        c.nlx_info = [c.nlx_info cadd{k}.nlx_info];
     end % ignore caught errors
     
   end
