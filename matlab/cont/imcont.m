@@ -69,7 +69,9 @@ function [c timestamp ts_syn] = imcont(varargin)
 %   'name'- a name for the contstruct (default: based on filename, chans).
 %   'convertdatafun' - defaults to '@single'; use [] for no conversion.
 %   'chanvals'- for 2-d data, scalar values associated with each channel.
-%   'chanlabels'- text labels for channels.
+%   'chanlabels'- text labels for channels. - if a (possibly reordered)
+%       subset of channels is selected using other options (like 'chans'),
+%       then 'chanlabels' refers to the *output* channel list.
 %   'dataunits'- defaults to '' (attempts to convert to mV if possible).
 %   'timeunits'- 'MWL_timestamps', 'microseconds' or 'seconds'.
 %
@@ -129,7 +131,6 @@ a = struct(...
   'eposflds', {{}},... % field names in an e.pos struct
   'chans', [],...
   'invert', [],...
-  'resample', [],...
   'timewin', [],...
   'neuralynxCSC', [],...
   'abffile', [],...
@@ -468,7 +469,7 @@ switch mode
     
     %%% overwrite info from .abf header from imcont inputs
     if ~isempty(a.chanlabels),
-      cl = a.chanlabels;
+      cl = a.chanlabels; % a.chanlabels correspond to reordered/selected chs
     else
       cl = abf_h.recChNames(ch_idx);
     end
