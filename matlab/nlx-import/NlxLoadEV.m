@@ -122,6 +122,9 @@ ev.info.header = NlxParseHeader(ev.info.rawheader);
 
 %% convert datatypes and scale as requested
 
+% handle case of bit16 being reported as -32768 by Nlx2MatEV
+nTTLs(nTTLs==-32768) = 32768;
+
 % convert evids to uint16
 ttls_uint16 = uint16(nTTLs);
 
