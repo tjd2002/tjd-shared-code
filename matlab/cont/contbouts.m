@@ -21,7 +21,9 @@ function [bouts th minevpeak minpeak maxevvalley maxvalley extrema extrema_t] = 
 %   'window' - acceptable gap between single events (<=) to be merged into
 %              a compound event (default [] = don't merge any events)
 %   'minevdur' - minimum (>=) valid length of a single event
+%   'maxevdur' - maximum (<=) valid length of a single event
 %   'mindur' - minimum (>=) valid length of compound event
+%   'maxdur' - maximum (<=) valid length of compound event
 %   'minevpeak' - minimum (>=) peak value for a single event to be valid
 %   'minpeak' - minimum (>=) peak value for a compound event to be valid
 %   'maxevvalley' - maximum (<=) valley value for a single event to be valid
@@ -69,7 +71,9 @@ function [bouts th minevpeak minpeak maxevvalley maxvalley extrema extrema_t] = 
       'interp',true,...
       'includeedges',false,...
       'minevdur', [],...
+      'maxevdur', [],...
       'mindur',[],...
+      'maxdur',[],...
       'window',[],...
       'minevpeak',[],...
       'minpeak',[],...
@@ -85,7 +89,9 @@ function [bouts th minevpeak minpeak maxevvalley maxvalley extrema extrema_t] = 
   %% validate args
   
   if isempty(a.mindur), a.mindur = 0; end
+  if isempty(a.maxdur), a.maxdur = Inf; end
   if isempty(a.minevdur), a.minevdur = 0; end
+  if isempty(a.maxevdur), a.maxevdur = Inf; end
   if isempty(a.window), a.window = 0; end
   
   if isempty(a.thresh);
