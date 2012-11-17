@@ -122,7 +122,7 @@ if ~isempty(a.downthresh),
 end
 
 % sort them both into one list
-xings = sort([upxings downxings]);
+xings = sort([upxings(:); downxings(:)]);
 
 % logical array of xings to ignore--assume none to start.
 % (Faster than resizing xings for each exclusion)
