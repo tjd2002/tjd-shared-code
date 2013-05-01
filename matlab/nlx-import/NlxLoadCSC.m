@@ -177,7 +177,11 @@ end
 % 'crop' the requested TimeWin so that it doesn't go beyond these limits
 
 % get the total number of buffers in the file
-hdr = NlxParseHeader(Nlx2MatCSC(a.Filename, [0 0 0 0 0], true, 1));
+try
+  hdr = NlxParseHeader(Nlx2MatCSC(a.Filename, [0 0 0 0 0], true, 1));
+catch
+  error(['Unable to load header -- Nlx2MatCSC barfs on files with no records? ' a.Filename]);
+end
 finfo = dir(a.Filename);
 nrecords = (finfo.bytes - hdr_bytes) ./ hdr.RecordSize;
 
