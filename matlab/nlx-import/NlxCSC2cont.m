@@ -29,6 +29,7 @@ p.addParamValue('CSCFilenames', '*.ncs');
 p.addParamValue('TimeWin', [-Inf Inf], @isnumeric);
 p.addParamValue('Name', [], @ischar);
 p.addParamValue('Force_ignore_ts_errors', false, @islogical);
+p.addParamValue('ts_syn_linmode', 'regress', @ischar);
 p.parse(varargin{:});
 
 % parse inputs
@@ -106,7 +107,7 @@ for j = 1:numel(CSCFiles),
     end
     
     % convert to contstruct (compatible with Tom's viewer and cont* functions)    
-    cdat_cscs{j} = imcont('neuralynxCSC', csc, 'ts_syn_linmode', 'regress', ...
+    cdat_cscs{j} = imcont('neuralynxCSC', csc, 'ts_syn_linmode', a.ts_syn_linmode, ...
                           'ts_permissive', a.Force_ignore_ts_errors);
 
 end
