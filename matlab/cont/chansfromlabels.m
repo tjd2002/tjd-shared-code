@@ -1,4 +1,5 @@
 function chans = chansfromlabels(clabels, alabels)
+% get channel index from labels
 
   % make a 1x1 cell array out of a string
   if ischar(alabels) && ~isempty(alabels),
