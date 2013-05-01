@@ -96,7 +96,7 @@ for m = 1:numel(b)
         tlen = find(tstdev<1/a.traintol, 1, 'first');
         if isempty(tlen)
             warning('No pulse train identified within bout for pulses:');
-            disp(bp);
+            % disp(bp);
             %         warning('No pulse trains < ''traintol'', using minimum instead');
             %         [~, tlen] = min(tstdev);
         end
@@ -200,8 +200,12 @@ for k = 1:numel(g),
     gtraindurms = sum(gpatms(:));
     gtrainfreqhz = 1000/gtraindurms;
     
+    % no pattern detected
+    if isempty(g(k).pattern),
+      g(k).name = 'No detected pattern';
+    
     % single pulse
-    if size(g(k).pattern,1)==1
+    elseif size(g(k).pattern,1)==1
         if numel(g(k).pattern) == 1,
             % non-repeating, only 1 pulse in bout
             g(k).name = sprintf('%gms, non-repeating',...
