@@ -13,11 +13,11 @@ function [R B] = target3dm(target, tilt, rot, tiltdir, dvintersect, quiet)
 %        rotation*: +ve angles = tilt left/back, -ve angles = tilt right/fwd. 
 %
 % rot = degrees of CCW rotation of tilted DV axis away from animal right
-%        (i.e. 'east', +ve X axis), after tilting. Must be within 0+/-30
-%        (tiltLR), or 90 +/- 30 (~tiltLR)
+%        (i.e. 'east', +ve X axis), after tilting. 
 %
-% tiltdir = 'LR', or 'FB': is the stereotax arm configured so that the arm
-%        tilts left-right, or front-back?
+% tiltdir = 'LR', or 'FB': is the stereotax arm configured so that, when 
+%        the probe is located over bregma, the arm tilts left-right, or 
+%        front-back?
 %
 % dvintersect = DV heights at which to calculate intersection of injection 
 %        vector (in old coordinates). Default = []. Useful for 
@@ -70,29 +70,34 @@ end
 % phi = elevation of DV axis from x0y0 plane (i.e. from horizontal)
 % theta = CCW rotation of DV axis in x0y0 plane away from positive 'X' 
 %       (i.e. animal right=0, nose=90)
-phi = deg2rad(tilt+90);
-theta = deg2rad(rot);
+phi = sub_deg2rad(tilt+90);
+theta = sub_deg2rad(rot);
 
     
 % x1 (ML) vector in x0y0z0 space
 
 if tiltLR, % Tilt Left-Right  case:
-    % Relative to DV, rotation (theta) is same, tilt (phi) is 90deg CW)
+    % Relative to DV, rotation (theta) is same, tilt (phi) is 90deg CW
     [x01(1) x01(2) x01(3)] = sph2cart(theta, phi-pi/2,1);
 
 else % Tilt Front-Back case
-    
-    % x1 (ML) vector
     % ML not tilted (phi=0); rotation (theta) 90deg CW relative to DV axis
     [x01(1) x01(2) x01(3)] = sph2cart(theta-pi/2, 0, 1);
 
 end
 
-% y1 (AP) vector in x0y0z0 space(AP stereotax axis can't tilt or rotate)
+
+% y1 (AP) vector in x0y0z0 space 
+
+% (AP stereotax axis can't tilt or rotate)
 y01 = [0 1 0];
 
-% z1 (DV) vector in x0y0z0 space (tilted, rotated as per inputs)
+
+% z1 (DV) vector in x0y0z0 space 
+
+% (tilted, rotated as per inputs)
 [z01(1) z01(2) z01(3)] = sph2cart(theta, phi,1);
+
 
 % the inverse of this matrix can be used to get coords in x1y1z1 given
 % target in x0y0z0
@@ -119,10 +124,19 @@ else
   B = [];
 end
   
+% pretty-print outputs
 if ~quiet
-    disp(sprintf('\nAll coords in R/A/D (as on Kopf stereotax digital display)'));
-    disp(sprintf('R: %+0.2f / %+0.2f / %+0.2f (target location in new coords)\n', R));
+    disp(sprintf('\nAll coords ML(Right+)/AP(Anterior+)/DV(Dorsal+), as on Kopf stereotax digital display.\n'));
+    disp(sprintf('R (target location in new coords): %+0.2f / %+0.2f / %+0.2f \n', R));
     if ~isempty(B),
-      disp(sprintf('B: %+0.2f / %+0.2f / %+0.2f (intersection with DV plane in old coords)\n', B'));
+      disp(sprintf('B (intersection with DV plane in old coords): %+0.2f / %+0.2f / %+0.2f \n', B'));
     end
 end
+
+function rad = sub_deg2rad(deg)
+% DEG2RAD-converts a matrix of angles in degrees into (-pi pi] radians
+
+rad = mod(deg * (pi/180), 2*pi);
+
+radneg = rad > pi;
+rad(radneg) = rad(radneg) - 2*pi;
