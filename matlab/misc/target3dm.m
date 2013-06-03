@@ -1,24 +1,49 @@
-function [R B] = target3dm(target, tilt, rot, tiltdir, quiet); 
-% TARGET3DM: reach a target using a tilted, rotated stereotax
+function [R B] = target3dm(target, tilt, rot, tiltdir, dvintersect, quiet)
+% TARGET3DM: target a location using a tilted, rotated stereotax
 %
-% x0,y0,z0 = Animal ML, AP, DV (same order/sign as stereotax: 
-%            Animal Right +ve, Anterior +ve, Up +ve, )
+% INPUTS:
+% target = [ML AP DV] atlas coordinates of target location, relative to
+%        Bregma:
+%          ML: animal right is +ve
+%          AP: anterior is +ve
+%          DV: dorsal (up) is +ve
+%          (A.K.A.: R/A/D coords, same as used by Kopf digital display)
 %
 % tilt = degrees of CCW tilt of DV axis away from vertical, *before any
-%        rotation*: +ve = tilt left/back, -ve = tilt right/fwd. (angle 
-%        from +ve Z)
+%        rotation*: +ve angles = tilt left/back, -ve angles = tilt right/fwd. 
 %
 % rot = degrees of CCW rotation of tilted DV axis away from animal right
 %        (i.e. 'east', +ve X axis), after tilting. Must be within 0+/-30
 %        (tiltLR), or 90 +/- 30 (~tiltLR)
 %
-% tiltdir = 'LR', or 'FB': are you tilting the arm LR, or FB?
+% tiltdir = 'LR', or 'FB': is the stereotax arm configured so that the arm
+%        tilts left-right, or front-back?
 %
-% tjd@stanford.edu 2010-2011
+% dvintersect = DV heights at which to calculate intersection of injection 
+%        vector (in old coordinates). Default = []. Useful for 
+%        establishing craniotomy locations in unrotated coordinates before 
+%        rotating the stereotax arms.
+%
+% quiet = true/false: silence text description of outputs, just return
+%        coordinates.
+%
+% OUTPUTS:
+% R = coordinates to use to reach the targeted location, using the 
+%        rotated/tilted stereotax arm.
+%
+% B = location, in *unrotated* coordinates, of the intersection of the 
+%        rotated injection vector with a DV plane specified by dvintersect. 
+%
+% EXAMPLES:
+%  To target a location at ML 0.25, AP 0.7, DV -6.6, with a stereotax arm 
+%  tilted 20 degrees to the right, and with no rotation:
+%     [R] = target3dm([0.25 0.7 -6.6], -20, 0, 'LR');
+%
+%
+% tjd@stanford.edu 2010-2013
 
 % TODO:
-% -make inputs/outputs optionally same as BrainNav uses
-% -get intersection with z=0, bregma plane (or any other plane?)
+% -make inputs/outputs optionally same order/sign as BrainNav uses
 % -enforce that rot can only be [0,90]+/-30, even for left arm. 180/270 
 %  would mean that sign of ML axis was reversed. test whether tiltLR is 
 %  correct, given rot.
@@ -31,6 +56,11 @@ switch lower(tiltdir)
     otherwise
         error('Must provide ''tiltdir'': either ''LR'', or ''FB''');
 end
+
+if ~exist('dvintersect', 'var')
+    dvintersect = [];
+end
+
 
 if ~exist('quiet', 'var')
     quiet = false;
@@ -76,17 +106,23 @@ R = R';
 % get intersection of injection vector with x0y0 plane (Bregma plane), in
 % x0y0z0 coordinates: (no dependence on rotated coords x1y1z1)
 
-% radial distance from target to Bregma plane
-Br = -target(3) / sin(phi); 
+if ~isempty(dvintersect)
+  % radial distance from target to Bregma plane
+  Br = [-target(3)+dvintersect] / sin(phi);
 
-% x0y0 distance from target to Bregma plane
-[B(1) B(2) B(3)] = sph2cart(theta,phi,Br);
+  % x0y0 distance from target to Bregma plane
+  [B(:,1) B(:,2) B(:,3)] = sph2cart(theta,phi,Br);
 
-% plus x0y0 distance to target
-B = B + target;
-
+  % plus x0y0 distance to target
+  B = bsxfun(@plus, B, target);
+else
+  B = [];
+end
+  
 if ~quiet
-    disp('All coords in R/A/D (as on stereotax)')
-    disp(sprintf('R: %0.2f / %0.2f / %0.2f (target location in new coords)', R));
-    disp(sprintf('B: %0.2f / %0.2f / %0.2f (intersection with bregma plane in old coords)', B));
+    disp(sprintf('\nAll coords in R/A/D (as on Kopf stereotax digital display)'));
+    disp(sprintf('R: %+0.2f / %+0.2f / %+0.2f (target location in new coords)\n', R));
+    if ~isempty(B),
+      disp(sprintf('B: %+0.2f / %+0.2f / %+0.2f (intersection with DV plane in old coords)\n', B'));
+    end
 end
