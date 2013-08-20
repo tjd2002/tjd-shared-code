@@ -182,6 +182,7 @@ function c = contcombine(c, cadd, varargin)
     if ~isempty(c.chanvals) && ~isempty(cadd{k}.chanvals),
       c.chanvals(chnos) = cadd{k}.chanvals;
     else
+      c.chanvals(1) = NaN; % since otherwise it defaults to zero
       c.chanvals(chnos) = NaN;
     end
     

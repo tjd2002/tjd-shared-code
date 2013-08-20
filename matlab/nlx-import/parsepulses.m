@@ -8,7 +8,8 @@ function [out] = parsepulses(varargin)
 % 'ev': struct returned from NlxLoadEV
 % 'chans': which channel to use
 % 'minboutgap': gap to separate bouts
-% 'tol': tolerance factor (def 10000)
+% 'tol': tolerance factor. pulse/gap durations are rounded to
+%     nearest 1/tol time units. (default 10000  = 0.1ms)
 % 'traintol': tolerance factor for stdev of train start times (def 1000)
 %
 %
@@ -23,7 +24,7 @@ p.addRequired('chans');
 p.addParamValue('minboutgap', 1, @isnumeric);
 p.addParamValue('tol', 10000, @isscalar); % tolerance factor: pulse/gap
 % durations are rounded to
-% nearest 1/tol
+% nearest 1/tol time units
 p.addParamValue('traintol', 1000, @isscalar); % tolerance factor for stdev of
 % train start times
 
