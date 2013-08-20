@@ -25,7 +25,7 @@ function c = contcombine(c, cadd, varargin)
 %       use samplerate from c).
 %   'interp_method' is the interp1 method that is passed to continterp
 %       (->'cubic', 'spline', 'linear', 'nearest', etc)
-%   'matchfirst' specifies that the sample times in the first cdat 'c' will be
+%   'match_first' specifies that the sample times in the first cdat 'c' will be
 %       used as-is (new timewin can still be specified). Useful to
 %       enforce no interpolation on c. (true,->false)
 %
