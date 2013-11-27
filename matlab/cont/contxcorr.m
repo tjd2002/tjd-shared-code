@@ -12,7 +12,7 @@ function [xc lags_t xc_correct xc_correct_count cdat] = contxcorr(cs, varargin)
 % Tom Davidson <tjd@stanford.edu> 2003-2010
 
   % data integrity check
-  contcheck(c);
+  contcheck(cs);
 
   a = struct(...
       'chans', [],...
@@ -140,7 +140,6 @@ function [xc lags_t xc_correct xc_correct_count cdat] = contxcorr(cs, varargin)
         B(isnan(B)) = 0; 
       end
 
-      
       [xc(:,k) lags] = xcorr(A, B, maxlags, a.scaleopt);
 
       
