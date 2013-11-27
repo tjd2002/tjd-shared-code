@@ -1,4 +1,4 @@
-function c = contwin(c, timewin, method)
+function [c win_samp] = contwin(c, timewin, method)
 % CONTWIN select a time window from a larger cdat struct
   
   if nargin<3,
