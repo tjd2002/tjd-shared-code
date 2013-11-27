@@ -20,6 +20,9 @@ function c = continterp(c,varargin)
 %      contains short stretches of data surrounded by NaN/Inf values, it
 %      can worsen the edge effects caused by interpolation. (Defaults to
 %      'true', except that for 'nearest' interpolation, it is always false).
+%  'extrapval': argument to interp1. In unusual cases, can end up needing to extrapolate
+%      first/last sample. Default is 'Nan', [] means to omit the extrapval 
+%      argument, allowing extrapolation when  using 'method' cubic or spline.
 %
 %  Outputs:
 %  cout - cont struct with new timebase
@@ -34,6 +37,7 @@ function c = continterp(c,varargin)
       'nsamps', [],...
       'samplerate',[],...
       'resampbeforeinterp', true,...
+      'extrapval', NaN,...
       'method', 'cubic');
   
   a = parseArgsLite(varargin,a);
@@ -119,8 +123,13 @@ function c = continterp(c,varargin)
   for k = nchans:-1:1 % reverse order so that first loop preallocates
     % blech: interp1 returns data in a row for vector inputs, 
     % last argument says use NaN for extrapolated values
-    newdata(:,k) = interp1(x,c.data(:,k), xi, a.method, NaN);
+    if ~isempty(a.extrapval)
+      newdata(:,k) = interp1(x,c.data(:,k), xi, a.method, a.extrapval);
+    else
+      newdata(:,k) = interp1(x,c.data(:,k), xi, a.method);
+    end
   end
+    
   c.data = newdata;
   
   c.tstart = xi(1);
