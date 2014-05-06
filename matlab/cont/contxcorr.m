@@ -131,7 +131,7 @@ function [xc lags_t xc_correct xc_correct_count cdat] = contxcorr(cs, varargin)
       if biased_correct
         xc_correct_this = xcorr(~isnan(A),~isnan(B), maxlags, a.scaleopt);
         xc_correct(:,k) = xc_correct(:,k) + xc_correct_this;
-        xc_correct_count(:,k) = xc_correct_count(:,k) + xc_correct_this>0;
+        xc_correct_count(:,k) = xc_correct_count(:,k) + xc_correct_this~=0;
         
         
         % NaN treated as missing values: don't increment correction
