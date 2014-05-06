@@ -45,7 +45,13 @@ function c = contfn(c, varargin)
            'function_handle']);
   end
   
+  datasz = size(c.data);
+  
   c.data = a.fn(c.data);
+  
+  if any(size(c.data) ~= datasz),
+    error('''fn'' must return data array of same size and shape as input');
+  end
   
   c = contdatarange(c);
   
