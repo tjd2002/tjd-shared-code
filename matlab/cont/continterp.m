@@ -11,7 +11,7 @@ function c = continterp(c,varargin)
 %  *c - cont struct to be interpolated
 %  'timewin' - start/end time of resulting cdat (default same as input)
 %  *'nsamps'/'samplerate' - number of samples or sampling rate (in Hz) for cout.
-%  'method', interpolation method ({'cubic'}, 'spline', 'linear', 'nearest' etc)
+%  'method', interpolation method ({'pchip'}, 'spline', 'linear', 'nearest' etc)
 %      (NB: spline will propagate NaNs through all data)
 %
 %  Uncommon optional inputs:
@@ -22,7 +22,7 @@ function c = continterp(c,varargin)
 %      'true', except that for 'nearest' interpolation, it is always false).
 %  'extrapval': argument to interp1. In unusual cases, can end up needing to extrapolate
 %      first/last sample. Default is 'Nan', [] means to omit the extrapval 
-%      argument, allowing extrapolation when  using 'method' cubic or spline.
+%      argument, allowing extrapolation when  using 'method' pchip or spline.
 %
 %  Outputs:
 %  cout - cont struct with new timebase
@@ -38,7 +38,7 @@ function c = continterp(c,varargin)
       'samplerate',[],...
       'resampbeforeinterp', true,...
       'extrapval', NaN,...
-      'method', 'cubic');
+      'method', 'pchip');
   
   a = parseArgsLite(varargin,a);
   
@@ -46,9 +46,12 @@ function c = continterp(c,varargin)
 % $$$     if size(c.data,1) > 1e6;
 % $$$       warning('no timewin provided interpolating entire cont struct');
 % $$$     end
-    
     a.timewin = [c.tstart c.tend];
-    
+  end
+  
+  if strcmp(lower(a.method), 'cubic')
+    %'cubic' method is deprecated in R2014a, sub in equivalent 'pchip'
+    a.method = 'pchip';
   end
     
   if sum([~isempty(a.nsamps) ~isempty(a.samplerate)]) ~= 1,
