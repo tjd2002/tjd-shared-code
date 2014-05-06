@@ -139,7 +139,7 @@ function c = subf_contfilter(c,filt,a)
   % get rid of previous states, if any
   reset(filt.dfilt);
   
-  if ~filt.dfilt.islinphase
+  if ~filt.dfilt.islinphase && ~a.nonlinphaseok,
     
     % not linear phase, could use filtfilt to correct instead of erroring...
     warning(['filter has non-linear phase distortion, delay ' ...
