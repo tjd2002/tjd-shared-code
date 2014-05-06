@@ -49,6 +49,12 @@ function [c timestamp ts_syn] = imcont(varargin)
 %   .nex file (as output from TDT), depends on readNexFile.m from Plexon
 %    'nexfile' - filename of .nex file
 %
+%   TDT 'wave' event data struct, as imported by Tom's tdt2mat function
+%    'TDTwave' struct
+%    'chans' - vector of channels to use (import all by default)
+%    Effect on other inputs:
+%     'timeunits' = 'seconds'
+%
 %   Wilson Lab (MIT) .eeg file - Note: depends on Fabian's mwlIO library
 %   *'eegfile'/'mwlIOeegfh' = filename/filehandle (from mwlopen) of .eeg file
 %    'chans' - vector of channels to use (import all by default)
@@ -134,8 +140,9 @@ a = struct(...
   'timewin', [],...
   'neuralynxCSC', [],...
   'abffile', [],...
-  'nexfile', [],...
   'abfchannelnames',[],...
+  'nexfile', [],...
+  'tdtwave', [],...
   'name', '',...
   'data', [],...
   'buffdata', [],...
@@ -197,6 +204,10 @@ end
 
 if ~isempty(a.nexfile),
   mode = [mode {'nex'}];
+end
+
+if ~isempty(a.tdtwave),
+  mode = [mode {'tdt'}];
 end
 
 if ~isempty(a.buffdata),
@@ -604,6 +615,127 @@ switch mode
     return;
 
     
+        %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+    % Import TDT wave data struct (as created by Tom's tdt2mat.m)
+  case 'tdt'
+    
+    % is this a continuously-sampled 'Wave' store?
+    if a.tdtwave.format ~= 1
+      error('Provided event struct is not of type ''Wave'' -- is it an event list?');
+    end
+    
+    % validate requested channels
+    if isempty(a.chans) % default to all channels
+      a.chans = a.tdtwave.chans; 
+    elseif ~all(ismember(a.chans, a.tdtwave.chans)),
+      % error: display bad values
+      a.tdtwave.chans
+      a.chans
+      error('Requested a.chans channels not present in file');
+    end
+    
+    nchans = numel(a.chans);
+    if nchans == 0,
+      error ('No data requested');
+    end
+    
+    chanione = a.tdtwave.channels==1;
+    nbuffs = sum(chanione);
+
+    % initialize 3-D array (bufferno, bufferlen, chan)
+    dat = zeros(nbuffs, a.tdtwave.npoints, nchans);
+    
+    % iterate over all channels
+    for k = 1:nchans,
+      % keep user order of channels requested, so they will line up with
+      % chanlabels
+      chan = a.chans(k);
+      chani = a.tdtwave.channels==chan;
+      if sum(chani) ~= nbuffs,
+        error('Mismatch in number of buffers for channel %d', chan)
+      end
+      
+      % get (still buffered) data for each channel
+      dat(:,:,k) = a.tdtwave.data(chani,:);
+    end
+
+    % 'buffdata' mode handles this in imcont below
+%     % collapse this later to a 1-liner
+%     datp = permute(dat,[2 1 3]);
+%     datpr = reshape(datp,[],nchans);
+%     dat = datpr;
+    
+    
+    % Get timestamps
+    ts = a.tdtwave.timestamps(chanione);
+    t_rec_start = ts(1);
+
+    ts = ts-t_rec_start; % convert from Unix time to to 'seconds from block start'
+
+     % 'buffdata' mode handles this in imcont below    
+%     ts = bsxfun(@plus, ts(:), (0:(a.tdtwave.npoints-1))*...
+%       (1./a.tdtwave.sampling_rate));
+%     ts = reshape(ts',[],1);
+
+
+    if ~isempty(a.name),
+      name = a.name;
+    else
+      name = a.tdtwave.storename;
+    end
+    
+    %% generate appropriate TDT default arguments
+    if ~isempty(a.chanlabels),
+      cl = a.chanlabels;
+    else
+      for k = 1:nchans
+        cl{k} = sprintf('Ch%d',a.chans(k));
+      end
+    end    
+
+    
+    %% Error if user tries to pass in data already provided by the struct
+    if ~isempty(a.dataunits),
+      error('Data units already specified in TDTwave struct.');
+    end
+    
+    if ~isempty(a.data),
+      error('Data already specified in TDTwave struct.');
+    end
+    
+    if ~isempty(a.timestamp) || ~isempty(a.timestamp_ends) || ~isempty(a.timeunits),
+      error('Time (with units) already specified in TDTwave struct.');
+    end
+    
+    
+    %% All other parameters are passed through as-is to the next imcont call
+    
+    % call imcont recursively with raw timestamps/data options
+    c = imcont(...
+      'timestamp', ts, ...
+      'buffdata', dat, ...
+      'dataunits', 'V', ...
+      'timeunits', 'seconds',...
+      'name', name,...
+      'chans', 1:nchans,... % already selected, in order, above
+      'chanlabels', cl,...
+      ...
+      'invert', a.invert, ...
+      'timewin', a.timewin,...
+      'chanvals', a.chanvals,...
+      'convertdatafun', a.convertdatafun,...
+      'ts_syn_linmode', a.ts_syn_linmode,...
+      'ts_permissive', a.ts_permissive,...
+      'allowable_tserr_samps', a.allowable_tserr_samps);
+    
+    % save TDT-specific info
+    c.tdtinfo.block_start_unixtime = t_rec_start;
+    c.tdtinfo.block_start_datestr = [datestr(t_rec_start/86400 + datenum(1970,1,1)) 'Z'];
+    
+    % Don't do additional processing--it was done in call out to imcont
+    return;
+    
+    
     %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
     % Import raw data/timestamp lists
   case 'raw'
@@ -652,7 +784,7 @@ switch mode
     end
     nchans = size(c.data,3);
     
-    c.data = permute(c.data,[2 1 3]); % get semples columnwise for reshape
+    c.data = permute(c.data,[2 1 3]); % arrange samples columnwise for reshape
     c.data = reshape(c.data, nrecords*recsize,nchans);
 
     timestamp = a.timestamp; 
@@ -663,6 +795,9 @@ switch mode
     else
       timeunits = 'seconds';
     end
+    
+  otherwise
+    error('Unrecognized imcont processing mode: %s', mode);
 end
 
 %% Common processing for all input modes
