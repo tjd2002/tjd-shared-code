@@ -23,6 +23,13 @@ function [c win_samp] = contwin(c, timewin, method)
     win_samp(1) = floor((timewin(1) - c.tstart) * c.samplerate) +1 ;
     win_samp(2) = ceil ((timewin(2) - c.tstart) * c.samplerate) +1 ;
     
+   case 'samps_good'
+    if ~isempty(timewin)
+        error('Can''t request ''samps_good'' and provide a ''timewin'' argument');
+    end
+    win_samp(1) = c.nbad_start+1;
+    win_samp(2) = size(c.data,1) - c.nbad_end;
+    
    otherwise
     error(['invalid win method: use ''samps_nearest'' (default), ''samps_within'', '...
            ' or ''samps_bracket''.']);
