@@ -74,14 +74,19 @@ function c = continterp(c,varargin)
     return;
   end
   
-  %%% [bracket requested timerange]
+  if a.timewin(1)<c.tstart || a.timewin(2)>c.tend,
+      error('Requested timewin [%g %g] outside input cdat range [%g %g]',...
+          a.timewin(1), a.timewin(2), c.tstart, c.tend);
+  end
+  
+  %%% [bracket requested timerange for cropping]
   % pad with 2 samples (larger of pre/post samples),
   % but don't extend past tstart/tend
-  timewin = a.timewin + [-2 2]./(min([c.samplerate a.samplerate]));
-  timewin = [max(timewin(1), c.tstart) min(timewin(2), c.tend)];
+  cropwin = a.timewin + [-2 2]./(min([c.samplerate a.samplerate]));
+  cropwin = [max(cropwin(1), c.tstart) min(cropwin(2), c.tend)];
 
   % crop data early to save filtering time
-  c = contwin(c, timewin);
+  c = contwin(c, cropwin);
   
   %%% initial downsample of high sampling rate data to avoid aliasing
   if strcmp(a.method, 'nearest') 
@@ -110,7 +115,7 @@ function c = continterp(c,varargin)
   if ~isempty(a.nsamps),
     xi = linspace(a.timewin(1), a.timewin(2), a.nsamps);
   else
-    xi = timewin(1):1/a.samplerate:timewin(2);
+    xi = a.timewin(1):1/a.samplerate:a.timewin(2);
   end
   
   disp('interpolating...');
