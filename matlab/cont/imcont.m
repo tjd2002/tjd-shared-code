@@ -695,9 +695,6 @@ switch mode
 
     
     %% Error if user tries to pass in data already provided by the struct
-    if ~isempty(a.dataunits),
-      error('Data units already specified in TDTwave struct.');
-    end
     
     if ~isempty(a.data),
       error('Data already specified in TDTwave struct.');
@@ -714,7 +711,7 @@ switch mode
     c = imcont(...
       'timestamp', ts, ...
       'buffdata', dat, ...
-      'dataunits', 'V', ...
+      'dataunits', a.dataunits, ...
       'timeunits', 'seconds',...
       'name', name,...
       'chans', 1:nchans,... % already selected, in order, above
@@ -795,6 +792,8 @@ switch mode
     else
       timeunits = 'seconds';
     end
+    
+    c.units = a.dataunits;
     
   otherwise
     error('Unrecognized imcont processing mode: %s', mode);

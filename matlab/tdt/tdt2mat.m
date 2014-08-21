@@ -36,6 +36,8 @@ S = tdt2mat2(filepath, tank, blk, event)
 %% TODO:
 % -Handle epoc_store secondary stores (what format code? where is the
 % non-strobe data stored???)
+% -Handle SlowStores (same issue as epoc_store?) OpenEx DataList internally
+% -Select channels/timewins for loading (avoid out-of-memory)
 
 
 function S = tdt2mat(filepath, tank, blk, event)
@@ -95,8 +97,8 @@ table = { 'float',  1, 'float';
           'long',   1, 'int32';
           'short',  2, 'short';
           'byte',   4, 'schar'; }; % a look-up table
-first_row = find(1==row,1);
-format    = data.format(first_row)+1; % from 0-based to 1-based
+first_row = find(row,1);
+S.format    = data.format(first_row)+1; % from 0-based to 1-based
 
 S.storename = event;
 S.sampling_rate = data.frequency(first_row);
@@ -106,21 +108,25 @@ S.channels      = data.chan(row);
 
 fp_loc  = data.fp_loc(row);
 
-if format ~=5
-  nsample = (data.size(first_row)-10) * table{format,2};
+if S.format ~=5
+  nsample = (data.size(first_row)-10) * table{S.format,2};
   S.data = zeros(length(fp_loc),nsample);
   for n=1:length(fp_loc)
     fseek(tev,fp_loc(n),'bof');
-    S.data(n,1:nsample) = fread(tev,[1 nsample],table{format,3});
+    S.data(n,1:nsample) = fread(tev,[1 nsample],table{S.format,3});
   end
   S.npoints = nsample;
-else % epoc_store event has no data, just timestamp, strobe, etc.
+else % epoc_stores and slow_stores have data as a float in the 'strobe' field.
   S.data = data.strobe(row);
   S.npoints = 1;
-  S.channels = repmat(1, size(S.data,1),1); %#ok
+  % epoc_store events list all strobe data as channel 0; 
+  % slow_store events use channel numbering
+  S.channels = data.chan(row);
+  if all(S.channels == 0),
+      S.channels = repmat(1, size(S.channels));
+  end
 end
 
-S.format = format;
 % Which channels are present in the file? 
 S.chans = sort(unique(S.channels))';
 

@@ -127,7 +127,7 @@ for m = 1:numel(b)
             
             % shift pattern so that longest gap comes last
             [~, maxgapi] = max(pat(:,2));
-            b(m).trainpattern = circshift(pat, tlen-maxgapi);
+            b(m).trainpattern = circshift(pat, [tlen-maxgapi,0]);
             b(m).trainfirstpulsei = mod(maxgapi,tlen)+1; % index into first pulse in first train
             
             % write out 'quality' of train
