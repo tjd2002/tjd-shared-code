@@ -639,7 +639,7 @@ switch mode
       error ('No data requested');
     end
     
-    chanione = a.tdtwave.channels==1;
+    chanione = a.tdtwave.channels==a.tdtwave.chans(1);
     nbuffs = sum(chanione);
 
     % initialize 3-D array (bufferno, bufferlen, chan)
