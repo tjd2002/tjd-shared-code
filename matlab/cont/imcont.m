@@ -639,7 +639,7 @@ switch mode
       error ('No data requested');
     end
     
-    chanione = a.tdtwave.channels==a.tdtwave.chans(1);
+    chanione = a.tdtwave.chans==a.tdtwave.chans(1);
     nbuffs = sum(chanione);
 
     % initialize 3-D array (bufferno, bufferlen, chan)
@@ -650,7 +650,7 @@ switch mode
       % keep user order of channels requested, so they will line up with
       % chanlabels
       chan = a.chans(k);
-      chani = a.tdtwave.channels==chan;
+      chani = a.tdtwave.chans==chan;
       if sum(chani) ~= nbuffs,
         error('Mismatch in number of buffers for channel %d', chan)
       end
