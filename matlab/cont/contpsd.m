@@ -3,6 +3,8 @@ function [P F] = contpsd(c, varargin)
 %
 % [P F] = contpsd(c, [name/value pairs]);
 % 
+%  Uses pwelch default (Hamming) window.
+%
 %  WARNING: Experimental code, not well-tested. See pwelch for 
 % 
 % Inputs:
@@ -10,10 +12,12 @@ function [P F] = contpsd(c, varargin)
 %  'segs' - restrict analysis to subsets of c.data
 %  'method', - method used to calculate psd 
 %    -'welch': currently only method available. See help pwelch
+%    -'fft'
 %  *'window_t' - time window (in seconds) for calculating PSD
 %  'nfft' - number of fft points (see pwelch, etc)
 %  'detrend' - whether to detrend the data in each seg (default:
-%      'constant'), see help detrend for other options
+%      'constant'), [] = means no detrend; see 'help detrend' for 
+%      other options
 %
 % Outputs:
 %  P - power spectral density at frequencies in F
@@ -85,7 +89,7 @@ function [P F] = contpsd(c, varargin)
     end
 
     % compute periodogram
-    [P_k F] = pwelch(dat,window,noverlap,a.nfft,c_k.samplerate);
+    [P_k F] = pwelch(dat,window,noverlap,a.nfft,c_k.samplerate, 'psd', 'onesided');
 
     % weight by # of windows in this seg (we'll re-normalize below)
     wt = floor(len-window./(window-noverlap))+1;
