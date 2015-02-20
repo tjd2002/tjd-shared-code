@@ -639,45 +639,9 @@ switch mode
       error ('No data requested');
     end
     
-    chanione = a.tdtwave.chans==a.tdtwave.chans(1);
-    nbuffs = sum(chanione);
-
-    % initialize 3-D array (bufferno, bufferlen, chan)
-    dat = zeros(nbuffs, a.tdtwave.npoints, nchans);
-    
-    % iterate over all channels
-    for k = 1:nchans,
-      % keep user order of channels requested, so they will line up with
-      % chanlabels
-      chan = a.chans(k);
-      chani = a.tdtwave.chans==chan;
-      if sum(chani) ~= nbuffs,
-        error('Mismatch in number of buffers for channel %d', chan)
-      end
-      
-      % get (still buffered) data for each channel
-      dat(:,:,k) = a.tdtwave.data(chani,:);
-    end
-
-    % 'buffdata' mode handles this in imcont below
-%     % collapse this later to a 1-liner
-%     datp = permute(dat,[2 1 3]);
-%     datpr = reshape(datp,[],nchans);
-%     dat = datpr;
-    
-    
-    % Get timestamps
-    ts = a.tdtwave.timestamps(chanione);
-    t_rec_start = ts(1);
-
-    ts = ts-t_rec_start; % convert from Unix time to to 'seconds from block start'
-
-     % 'buffdata' mode handles this in imcont below    
-%     ts = bsxfun(@plus, ts(:), (0:(a.tdtwave.npoints-1))*...
-%       (1./a.tdtwave.sampling_rate));
-%     ts = reshape(ts',[],1);
-
-
+    % select and reorder channels if requested:
+    dat = a.tdtwave.data(:,a.chans);
+       
     if ~isempty(a.name),
       name = a.name;
     else
@@ -709,12 +673,12 @@ switch mode
     
     % call imcont recursively with raw timestamps/data options
     c = imcont(...
-      'timestamp', ts, ...
-      'buffdata', dat, ...
+      'timestamp_ends', [a.tdtwave.tstart a.tdtwave.tend], ...
+      'data', dat, ...
       'dataunits', a.dataunits, ...
       'timeunits', 'seconds',...
       'name', name,...
-      'chans', 1:nchans,... % already selected, in order, above
+      'chans', 1:nchans,... % already selected/reordered above
       'chanlabels', cl,...
       ...
       'invert', a.invert, ...
@@ -724,10 +688,14 @@ switch mode
       'ts_syn_linmode', a.ts_syn_linmode,...
       'ts_permissive', a.ts_permissive,...
       'allowable_tserr_samps', a.allowable_tserr_samps);
+
+    % override max_tserr with that provided by TDT2mat in tdtwave struct
+    c.max_tserr = a.tdtwave.max_ts_err;
     
     % save TDT-specific info
-    c.tdtinfo.block_start_unixtime = t_rec_start;
-    c.tdtinfo.block_start_datestr = [datestr(t_rec_start/86400 + datenum(1970,1,1)) 'Z'];
+    c.tdtinfo.block_start_unixtime = a.tdtwave.t_rec_start;
+    c.tdtinfo.block_start_datestr = [datestr(a.tdtwave.t_rec_start/86400 + datenum(1970,1,1)) 'Z'];
+    c.tdtinfo.format_code = a.tdtwave.format;
     
     % Don't do additional processing--it was done in call out to imcont
     return;

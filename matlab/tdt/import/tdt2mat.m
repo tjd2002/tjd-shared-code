@@ -156,11 +156,15 @@ if sum(row) == 0
 end
 
 % See OpenDeveloper manual 'GetNPer' and 'DFromToString' (a typo for Data FORMat To String)
-%       { TDT type, #bytes, fread code,      Matlab type }
-table = { 'float',  1,      'float=>single', 'single';
-          'long',   1,      'int32=>int32',  'int32';
-          'short',  2,      'short=>int16',  'int16';
-          'byte',   4,      'schar=>int8',   'int8'}; % a look-up table
+% Format codes are 0-5 in 6 rows below
+%       { TDT type,  bytes, fread code,       Matlab type }
+table = { 'float',   4,     'float=>single',  'single';
+          'long',    4,     'int32=>int32',   'int32';
+          'short',   2,     'short=>int16',   'int16';
+          'byte',    1,     'schar=>int8',    'int8';
+          'double',  8,     'double=>double', 'double'; % not seen in the wild
+          'qword'    8,     'int64=>int64',   'int64'}; % not seen in the wild
+
 first_row = find(row,1);
 S.format    = data.format(first_row)+1; % from 0-based to 1-based
 
@@ -173,7 +177,8 @@ S.buff_channel      = data.chan(row);
 fp_loc  = data.fp_loc(row);
 
 if S.format ~=5
-  nsample = (data.size(first_row)-10) * table{S.format,2};
+  nsample = (4.*data.size(first_row)) - 40) ./ table{S.format,2};
+  if rem(nsample,1), error('Non-integer number of samples--problem with size calculation'); end
   S.buff_data = zeros(length(fp_loc),nsample, table{S.format,4});
   for n=1:length(fp_loc)
     fseek(tev,fp_loc(n),'bof');
