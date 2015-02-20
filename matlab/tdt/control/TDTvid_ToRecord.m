@@ -48,7 +48,7 @@ disp(sprintf('\nRecording started:\n  Tank: %s\n  Block: %s\n  T_start: %d\n',..
 %videoPath = [topdir filesep 'Video' filesep];
 % Save video in TDT Data Tank folder for this block (makes copying data
 % simpler)
-videoPath = recTank;
+videoPath = [recTank filesep recBlock filesep];
 
 if ~exist(videoPath, 'dir'), mkdir(videoPath); end
 
