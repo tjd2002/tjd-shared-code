@@ -1,9 +1,22 @@
-function [vid, src] = TDT_VidInit(fps, exposure_ms, binning)
+function [vid, src] = TDT_VidInit(format, fps, exposure_ms, binning, gain)
+% Set up camera to synchronize with TDT (requires Image Acq toolbox)
+%
+% [vid src] = TDT_VidInit (format, fps, exposure_ms, binning, gain)
+% 
+% Sets up an AVT Manta G125C camera for behavior recording, including
+% external trigger and digital outputs (one tick per frame) for TDT control
+% of video recording, and synchronization of video with TDT hardware.
+%
+% Examples:
+%  
+% [vid src] = TDT_VidInit('BayerRG8',20,30,2,10);
+% [vid src] = TDT_VidInit('Mono8',20,30,1,10);
 
 %% defaults
 if ~exist('fps', 'var') || isempty(fps), fps = 20; end
 if ~exist('exposure_ms', 'var') || isempty(exposure_ms), exposure_ms = 40; end
 if ~exist('binning', 'var') || isempty(binning), binning = 3; end
+if ~exist('gain', 'var') || isempty(gain), gain = 10; end
 
 % Set up videoinput object (uses Image Acquisition Toolbox), for use with
 % AVT Manta G-125C monochrome camera
@@ -17,9 +30,13 @@ end
 switch numel(vid)
   case 0
     % create new videoinput
-    vid = videoinput('gige', 1, 'Mono8','Tag','TDTVideo');
+    vid = videoinput('gige', 1, format,'Tag','TDTVideo');
   case 1    
     %reuse videoinput
+    if ~strcmp(vid.VideoFormat, format),
+        delete(vid);
+        vid = videoinput('gige', 1, format,'Tag','TDTVideo');
+    end        
   otherwise
     error('More than 1 TDTVideo object already exists.')
 end
@@ -35,8 +52,13 @@ src.PacketSize = 16000;
 %% Set up imaging parameters
 src.AcquisitionFrameRateAbs = fps; %fps (may be modified by camera)
 src.ExposureTimeAbs = exposure_ms * 1000; % microseconds. 40k = 1/50s
-src.BinningVertical = binning; % reduce frame size by 9x
-src.BinningHorizontal = binning;
+% src.BinningVertical = binning; % reduce frame size
+% src.BinningHorizontal = binning;
+src.DecimationVertical = binning; % reduce frame size
+src.DecimationHorizontal = binning;
+vid.ROIPosition = [0 0 vid.VideoResolution];
+src.Gain = gain; % 0 - 32; 10 results in reasonably low noise
+
 
 %% set up hardware triggering to respond to TDT digital output 
 % (per Manta Camera Controls manual p.46)
@@ -52,7 +74,10 @@ set(src, 'AcquisitionEndTriggerMode','On')
 set(src, 'AcquisitionEndTriggerSource','Line1')
 set(src, 'AcquisitionEndTriggerActivation','LevelLow')
 
-src.FrameStartTriggerSource = 'Freerun';
+set(src, 'AcquisitionRecordTriggerMode','Off')
+
+src.FrameStartTriggerMode = 'Off';
+%src.FrameStartTriggerSource = 'Freerun';
 
 
 %% set up camera frame sync output to be read by TDT

@@ -1,3 +1,5 @@
+%%% DEPRECATED--use TDT_vid_expt_script
+
 %% TODO
 % -parameterize video/tank storage locations
 % -write functions/dedupe code
@@ -32,15 +34,16 @@
 
 %% INITIALIZE TDT AND CAMERA
 [xDA] = TDT_Init;
-[vid, src] = TDT_VidInit(20,40,3);
-
-% get device name (assume only one TDT device connected)
-dev = xDA.GetDeviceName(0);
 
 %SETUP TANK LOCATION (ADDTANK?)
 
+%[vid, src] = TDT_VidInit('Mono8', 20,40,3,0); % format, fps, exposure, binning
+vid = TDT_VidInit('BayerRG8', 20,20,1,10); % format, fps, exposure, binning, gain
 
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %% ->Preview (no logging)
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 disp(sprintf('\n\n*** GOING TO PREVIEW MODE ***'));
 
@@ -50,6 +53,7 @@ xDA.SetTargetVal([dev '.VidAcq'], 0);
 % vid: stop preview and record, if running
 pause(0.5) % wait for last frame to arrive.
 stoppreview(vid);
+pause(0.5);
 stop(vid);
 
 if ~isempty(vid.DiskLogger)
@@ -58,7 +62,7 @@ if ~isempty(vid.DiskLogger)
   if TDT_FrameCnt == Vid_FrameCnt,
     disp(sprintf('OK! TDT/Video frame counts match: %d\n', TDT_FrameCnt)); 
   else
-    error(sprintf('Frame Count mismatch: TDT = %d; Video file = %d\n', TDT_FrameCnt, VidFrameCnt)); 
+    error(sprintf('Frame Count mismatch: TDT = %d; Video file = %d\n', TDT_FrameCnt, Vid_FrameCnt)); 
   end
   % delete logger so that we don't accidentally keep recording into it.
   vid.DiskLogger = [];
@@ -77,16 +81,22 @@ preview(vid);
 
 %tdt: TURN ON VIDACQ
 xDA.SetTargetVal([dev '.VidAcq'], 1);
+xDA.GetTargetVal([dev '.VidAcq'])
 
 disp(sprintf('   --> DONE\n'));
 
 
 
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %% ->Record into new block, new video file
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 disp(sprintf('\n\n*** GOING TO RECORD MODE ***'));
 
-%tdt: TURN OFF VIDACQ
+%tdt: Save VIDACQ state
+VidOn = xDA.GetTargetVal([dev '.VidAcq']);
+
+% TURN OFF VIDACQ
 xDA.SetTargetVal([dev '.VidAcq'], 0);
 
 % vid: stop preview and record, if running
@@ -97,10 +107,10 @@ stop(vid);
 if ~isempty(vid.DiskLogger)
   TDT_FrameCnt = xDA.GetTargetVal([dev '.FrameCnt']);
   Vid_FrameCnt = get(vid.DiskLogger, 'FrameCount');
-  if TDT_FrameCnt == VidFrameCnt,
+  if TDT_FrameCnt == Vid_FrameCnt,
     disp(sprintf('OK! TDT/Video frame counts match: %d\n', TDT_FrameCnt)); 
   else
-    error(sprintf('Frame Count mismatch: TDT = %d; Video file = %d\n', TDT_FrameCnt, VidFrameCnt)); 
+    warning(sprintf('Frame Count mismatch: TDT = %d; Video file = %d\n', TDT_FrameCnt, Vid_FrameCnt)); 
   end
   % delete logger so that we don't accidentally keep recording into it.
   vid.DiskLogger = [];
@@ -115,6 +125,9 @@ disp(sprintf('\nRecording started:\n  Tank: %s\n  Block: %s\n  T_start: %d\n',..
   recTank, recBlock, BlockStart_unixtime));
 
 [recTankPath recTankName] = fileparts(recTank);
+[topdir tanksdir] = fileparts(recTankPath);
+videoPath = [topdir filesep 'Video' filesep];
+mkdir(videoPath);
 
 %tdt: RESET FRAME COUNT
 xDA.SetTargetVal([dev '.ResetFrameCnt'], 1);
@@ -122,8 +135,8 @@ xDA.SetTargetVal([dev '.ResetFrameCnt'], 0);
 
 %vid: SET UP FILE LOGGER FOR VIDEO
 vid.LoggingMode = 'disk';
-diskLogger = VideoWriter(['D:\FP_LFP_Vid_Jan2014\Video\' recTankName '_' recBlock '_' datestr(now,30) '.mp4'], 'MPEG-4');
-diskLogger.Quality = 90;
+diskLogger = VideoWriter([videoPath filesep recTankName '_' recBlock '_' datestr(now,30) '.mp4'], 'MPEG-4');
+diskLogger.Quality = 95;
 diskLogger.FrameRate = src.AcquisitionFrameRateAbs; % may be different than requested
 
 disp(sprintf('Video file: %s\n',...
@@ -138,7 +151,10 @@ vid.DiskLogger = diskLogger;
 preview(vid);
 start(vid);
 
-%tdt: TURN ON VIDACQ
-xDA.SetTargetVal([dev '.VidAcq'], 1);
+% %tdt: TURN ON VIDACQ
+% xDA.SetTargetVal([dev '.VidAcq'], 1);
+
+% tdt: TURN ON VIDACQ if it was on when we started recording
+xDA.SetTargetVal([dev '.VidAcq'], VidOn);
 
 disp(sprintf('   --> DONE\n'));

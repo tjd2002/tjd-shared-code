@@ -16,5 +16,11 @@ end
 % report something fun
 disp(xDA.GetTankName);
 
+% get device name (assume only one TDT device connected)
+dev = xDA.GetDeviceName(0);
+if isempty(dev),
+    error('Can''t get TDT device name; Go to ''Idle''? wait a few seconds? Restart Matlab?');
+end
+
 
 
