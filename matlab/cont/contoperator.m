@@ -25,7 +25,13 @@ function c = contoperator(c1, c2, varargin)
     if ischar(a.op)
       a.infix = ['_' a.op '_'];
     else
-      a.infix = '_op_';
+        % Use function name if a builtin (func2str won't begin with '@')
+        funcstr = func2str(a.op);
+        if ~isempty(funcstr) && funcstr(1)~='@'
+            a.infix = ['_' funcstr '_'];
+        else
+          a.infix = '_op_';
+        end
     end
   end
   
@@ -53,7 +59,7 @@ function c = contoperator(c1, c2, varargin)
   c = contdatarange(c);
   
   if isempty(a.name)
-    c.name = [c1.name a.infix c2.name];
+    c.name = ['(' c1.name ')' a.infix '(' c2.name ')'];
   else
     c.name = a.name;
   end
@@ -62,7 +68,7 @@ function c = contoperator(c1, c2, varargin)
     c.chanlabels = {};
   else
     % concatenate chanlabels with operator string
-    c.chanlabels = strcat(c1.chanlabels, a.infix, c2.chanlabels);
+    c.chanlabels = strcat('(', c1.chanlabels, ')', a.infix, '(', c2.chanlabels, ')');
   end
   
   % data integrity check
