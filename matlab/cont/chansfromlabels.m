@@ -1,11 +1,28 @@
 function chans = chansfromlabels(clabels, alabels)
-% get channel index from labels
+% CHANSFROMLABELS: get cont channel index from chanlabel/s
+%
+% chansfromlabels(c, alabels)
+% chansfromlabels(clabels, alabels)
+%  c: contstruct, with 'chanlabels' field
+%  clabels: cell array of chanlabels
+%  alabels: string or cell array of strings to match.
+%
+% Order of inputs is preserved, so can be used for reordering channels.
+%
+% Examples:
+% idx = chansfromlabels(cdat, 'Ref1X');
+% idx = chansfromlabels(cdat, {'Ref1X' 'Ref1Y' 'Dat1'});
+% idx = chansfromlabels(cdat.chanlabels, {'Ref1X' 'Ref1Y' 'Dat1'});
 
-  % make a 1x1 cell array out of a string
+  % make a 1x1 cell array out of a string input
   if ischar(alabels) && ~isempty(alabels),
     alabels = {alabels};
   end
   
+  % allow passing in a cont struct
+  if isstruct(clabels) && isfield(clabels, 'chanlabels');
+      clabels = clabels.chanlabels;
+  end
   
   chans = [];
   if ~isempty(alabels) && ~isempty(clabels)
