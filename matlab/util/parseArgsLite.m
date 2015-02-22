@@ -37,18 +37,21 @@ if numel(ArgStruct) > 1,
          'with ''struct'' when constructing defaults? If so, use extra braces.']);
 end
 
-% any non-string arguments at the start of the arglist get put into
-% 'a field called NumericArguments'
-NumArgCount=1;
-while (NumArgCount<=size(args,2))&&(~ischar(args{NumArgCount}))
-    NumArgCount=NumArgCount+1;
-end
-
-if (NumArgCount>1)
-  NumArgCount=NumArgCount-1;
-  ArgStruct.NumericArguments={args{1:NumArgCount}};
-  args(1:NumArgCount) = [];
-end 
+% Removed Feb 2015: not used in my code, causes problems. (Doesn't error if
+% you forget the 'param')
+%
+% % any non-string arguments at the start of the arglist get put into
+% % 'a field called NumericArguments'
+% NumArgCount=1;
+% while (NumArgCount<=size(args,2))&&(~ischar(args{NumArgCount}))
+%     NumArgCount=NumArgCount+1;
+% end
+% 
+% if (NumArgCount>1)
+%   NumArgCount=NumArgCount-1;
+%   ArgStruct.NumericArguments={args{1:NumArgCount}};
+%   args(1:NumArgCount) = [];
+% end 
 
 
 for k = 2:2:length(args), % only applies to 'values'
