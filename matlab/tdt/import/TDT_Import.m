@@ -1,34 +1,37 @@
-%% tdt2mat.m %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+function S = TDT_Import(filepath, tank, blk, name, chans, timewin,...
+    return_timestamps);
+%% TDT_Import.m %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 % Import data from TDT system recording into Matlab structure
 %
-% S = tdt2mat(filepath, tank, blk, event, chans)
+% S = TDT_Import(filepath, tank, blk, event, chans)
 %
 % INPUTS
 %   filepath: folder where tank is stored
 %    tank: tank name
 %     blk: block name
-%   event: event name (ie 'Wave')
+%    name: store/event name (ie 'Wave')
+%
+% OPTIONAL INPUTS
 %   chans: for 'Wave' events, array of channel #s to import 
 %          (Optional. []/default = import all chans)
+% timewin: 1x2 array of start/end time to import (NOT CURRENTLY SUPPORTED)
+% return_timestamps: 
+%          flag whether to populate the 'timestamps' field with the time of
+%          each sample. Redundant with tstart/tend/samplerate, so defaults
+%          to false.
 %
 % OUTPUT
 % data structure with fields
 %         storename: 4-character Store name
-%     sampling_rate: (Hz)
 %              data: data in rows, 1 column per channel
-%        timestamps: timestamp corresponding to each sample
 %             chans: TDT channel numbers, 1 per data column
+%            tstart: start time of extracted data, relative to when recording started (s) 
+%              tend: end time of extracted data, relative to when recording started (s) 
+%     sampling_rate: (Hz)
+%       format_code:
 %
-% %% Old 'wave' format, before unbuffering
-%        timestamps: timestamp corresponding to each data row
-%          channels: channel corresponding to each data row
-%              data: data in rows, npoints columns
-%           npoints: number of data points per timestampt
-%             chans: array of channel numbers, in order
-%
-%
-% SOURCE: http://jaewon.mine.nu/jaewon/2010/10/04/how-to-import-tdt-tank-into-matlab/
-%
+% derived from: 
+%  http://jaewon.mine.nu/jaewon/2010/10/04/how-to-import-tdt-tank-into-matlab/
 %
 % Example usage:
 %{
@@ -36,8 +39,9 @@ filepath = 'C:\TDT\OpenEx\Tanks';
 tank = 'SETUPTANK';
 blk = 'Test1-2';
 event = 'Wave';
+chans = [2 4]; % extract only 2 channels
 
-S = tdt2mat2(filepath, tank, blk, event, chans)
+S = TDT_Import(filepath, tank, blk, event, chans)
 %}
 %% %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 % TDT Import notes
@@ -49,12 +53,14 @@ S = tdt2mat2(filepath, tank, blk, event, chans)
 %  skew, drift, nonlinearities. Woohoo! 
 %
 % TODO:
-% -update imcont.m to handle new format
-% -Select channels/timewins during loading (avoid out-of-memory)
+% -How to deal with outputting different data types? TDT uses substructures 
+%  for each data type (Wave, Strobe, etc)
+% -Select channels/timewins *during loading* (to avoid out-of-memory conditions)
 % -Don't load all data at first
-% -Check out SEV2mat.m (which reads .sev files, and doesn't use ActiveX!)
-% -rename to avoid confusion with TDT2mat: TDT_LoadStore, TDT_ParseHeader?
+% -Support other TDT data types: snippets, etc.
+% -Check out TDT-provided SEV2mat.m (which reads .sev files, and doesn't use ActiveX!)
 % -'info' field for true start time, etc?
+% -Handle intermittently recorded Waves (using timestamps field)
 % -Handle epoc_store secondary stores (what format code? where is the
 % non-strobe data stored???)
 % -Handle SlowStores (same issue as epoc_store?) OpenEx DataList internally
@@ -67,12 +73,19 @@ S = tdt2mat2(filepath, tank, blk, event, chans)
 % -un-bufferize wave data
 % -test for timestamp errors in buffers (no need to interpolate timestamps
 %  on each buffer first
+% -rename to avoid confusion with TDT2mat: TDT_LoadStore, TDT_ParseHeader?
 
-function S = tdt2mat(filepath, tank, blk, event, chans)
 
-% 'chans' is an optional input
+% handle missing/optional inputs
+if ~exist('name', 'var'), name= []; end; % will result in list of available store names being displayed
 if ~exist('chans', 'var'), chans = []; end;
+if ~exist('timewin', 'var'), timewin= []; end;
+if ~exist('return_timestamps', 'var'), return_timestamps = false; end;
 
+% Haven't implemented 'timewin' yet
+if ~isempty(timewin),
+    error('''timewin'' argument not currently supported; omit or leave empty to import all data.');
+end
 
 filename = strcat(tank, '_', blk);
 
@@ -85,15 +98,16 @@ S = struct(...
     'chans', [],...
     'tstart', [],...
     'tend', [],...
-    ... %    'timestamps', [],...
+    'timestamps', [],...
     'sampling_rate', [],...
     ...
-    'format', [],...
+    'format_code', [],...
     'buff_timestamps', [],...
     'buff_channel', [],...
     'buff_data', [],...
     'buff_npoints', [],...
-    't_rec_start', [],...
+    't_rec_start_UnixTime', [],...
+    't_rec_start_UTC', [],...
     'max_ts_err', []);
 
 % open the files
@@ -129,9 +143,9 @@ data.timestamp = fread(tsq, [ntsq 1], '*double', recsize_bytes-8);
 fseek(tsq, 24, 'bof');
 data.fp_loc    = fread(tsq, [ntsq 1], '*int64',  recsize_bytes-8);
 
-% % read 'strobe' below only if requested
-% fseek(tsq, 24, 'bof');
-% data.strobe    = fread(tsq, [ntsq 1], '*double', recsize_bytes-8); 
+% read 'strobe' below only if requested
+fseek(tsq, 24, 'bof');
+data.strobe    = fread(tsq, [ntsq 1], '*double', recsize_bytes-8); 
 
 fseek(tsq, 32, 'bof');
 data.format    = fread(tsq, [ntsq 1], '*int32',  recsize_bytes-4); 
@@ -139,36 +153,46 @@ data.format    = fread(tsq, [ntsq 1], '*int32',  recsize_bytes-4);
 fseek(tsq, 36, 'bof');
 data.frequency = fread(tsq, [ntsq 1], '*float',  recsize_bytes-4);
 
-
 allnames = unique(data.name,'rows');
 % exclude 'names' that contain ASCII Null character (==0), these are 
 % special TDT codes, not real stores.
 allnames = allnames(all(double(allnames)~=0,2),:);
 
-% Read A/D samples from tev
-row = ismember(data.name, event, 'rows');
+% Get rows matching requested store name
+if isempty(name), 
+    row = [];
+else
+    row = ismember(data.name, name, 'rows');
+end
 
 if sum(row) == 0
-  disp(['Requested store name ''' event ''' not found (case-sensitive).'])
+  disp(['Requested store name ''' name ''' not found (case-sensitive).'])
   disp('File contains the following TDT store names:');
   disp(allnames);
   error('TDT store name not found.');
 end
 
+% Second entry in the .tsq file always contains the timestamp of the start 
+% of the block. TDT timestamps are in Unix time (seconds elapsed since 
+% January 1, 1970 -- http://en.wikipedia.org/wiki/Unix_time )
+S.t_rec_start_UnixTime = data.timestamp(2);
+S.t_rec_start_UTC = [datestr(S.t_rec_start_UnixTime/86400 + datenum(1970,1,1)) 'Z'];
+
 % See OpenDeveloper manual 'GetNPer' and 'DFromToString' (a typo for Data FORMat To String)
 % Format codes are 0-5 in 6 rows below
 %       { TDT type,  bytes, fread code,       Matlab type }
-table = { 'float',   4,     'float=>single',  'single';
-          'long',    4,     'int32=>int32',   'int32';
-          'short',   2,     'short=>int16',   'int16';
-          'byte',    1,     'schar=>int8',    'int8';
-          'double',  8,     'double=>double', 'double'; % not seen in the wild
-          'qword'    8,     'int64=>int64',   'int64'}; % not seen in the wild
+table = { 'float',   4,     'float=>single',  'single'; % 0 
+          'long',    4,     'int32=>int32',   'int32';  % 1
+          'short',   2,     'short=>int16',   'int16';  % 2
+          'byte',    1,     'schar=>int8',    'int8';   % 3
+          'double',  8,     'double=>double', 'double'; % 4 
+          'qword'    8,     'int64=>int64',   'int64'}; % 5 not seen in the wild
 
 first_row = find(row,1);
-S.format    = data.format(first_row)+1; % from 0-based to 1-based
+S.format_code    = data.format(first_row); 
+format_idx = S.format_code+1; % from 0-based to 1-based for table lookup
 
-S.storename = event;
+S.storename = name;
 S.sampling_rate = double(data.frequency(first_row));
 S.buff_timestamps    = data.timestamp(row);
 S.buff_channel      = data.chan(row);
@@ -176,13 +200,13 @@ S.buff_channel      = data.chan(row);
 
 fp_loc  = data.fp_loc(row);
 
-if S.format ~=5
-  nsample = (4.*data.size(first_row)) - 40) ./ table{S.format,2};
+if S.format_code ~=4
+  nsample = ((4 .* data.size(first_row)) - 40) ./ table{format_idx,2};
   if rem(nsample,1), error('Non-integer number of samples--problem with size calculation'); end
-  S.buff_data = zeros(length(fp_loc),nsample, table{S.format,4});
+  S.buff_data = zeros(length(fp_loc),nsample, table{format_idx,4});
   for n=1:length(fp_loc)
     fseek(tev,fp_loc(n),'bof');
-    S.buff_data(n,1:nsample) = fread(tev,[1 nsample],table{S.format,3});
+    S.buff_data(n,1:nsample) = fread(tev,[1 nsample],table{format_idx,3});
   end
   S.buff_npoints = double(nsample);
 else % epoc_stores and slow_stores have data as a float in the 'strobe' field.
@@ -201,7 +225,7 @@ S.chans = sort(unique(S.buff_channel))';
 
 % 1: continuously-sampled 'Wave' store
 % Can we unbufferize other formats?
-if S.format == 1
+if S.format_code == 0
 
     % validate requested channels
     if isempty(chans) % default to all channels, sorted
@@ -243,10 +267,8 @@ if S.format == 1
     
     % Process timestamps
     ts = S.buff_timestamps(chanione);
-    % TDT timestamps are in Unix time (seconds since 1/1/1970--
-    % http://en.wikipedia.org/wiki/Unix_time )
-    S.t_rec_start = ts(1);
-    ts = ts-S.t_rec_start; % convert from Unix time to to 'seconds from block start'
+    % convert from TDT timestamps to 'seconds from block start'
+    ts = ts-S.t_rec_start_UnixTime; 
     
     % Check for missing timestamps (one per buffer)
     ts_syn = linspace(ts(1),ts(end), numel(ts))'; % 'synthetic' timestamps
@@ -258,13 +280,16 @@ if S.format == 1
 
     S.tstart = ts(1);
     S.tend = ts(end)+(S.buff_npoints-1)/S.sampling_rate;
-
-%     % Interpolate timestamps over entire file (more accurate than doing it
-%     % buffer-wise, since sample clock is exact).
-%     S.timestamps = ...
-%         linspace(ts(1),...
-%                  ts(end)+(S.buff_npoints-1)/S.sampling_rate,...
-%                  numel(S.data));
     
+    % Interpolate timestamps over entire file (more accurate than doing it
+    % buffer-wise, since sample clock is exact).
+    if return_timestamps
+        S.timestamps = ...
+            linspace(ts(1),...
+            ts(end)+(S.buff_npoints-1)/S.sampling_rate,...
+            numel(S.data));
+    end
+    
+    % discard some fields we don't want to return for 'wave's
     S = rmfield(S, {'buff_npoints', 'buff_channel', 'buff_data', 'buff_timestamps'});
 end
