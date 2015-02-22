@@ -39,9 +39,13 @@ function [c chans] = contchans(c,varargin)
     error('can only provide one of chans and chanlabels');
   end
   
-  % if both args are empty, use all channels (columns)
+%   % if both args are empty, use all channels (columns)
+%   if isempty(a.chans) && isempty(a.chanlabels),
+%     chans = 1:nchans;
+
+  % if both args are empty return no channels
   if isempty(a.chans) && isempty(a.chanlabels),
-    chans = 1:nchans;
+      chans = [];
     
   elseif ~isempty(a.chans),
       chans = a.chans;
