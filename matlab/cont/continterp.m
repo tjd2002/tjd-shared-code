@@ -1,7 +1,7 @@
-function c = continterp(c,varargin)
+function c_out = continterp(c,varargin)
 % CONTINTERP resample and interpolate cont data at specified sample times
 %
-%  cout = continterp(c,[name/value pairs])
+%  c_out = continterp(c,[name/value pairs])
 %
 % The sample times at which to interpolate the data are specified by
 % providing a start/end time, and either a total number of samples, or a
@@ -10,9 +10,10 @@ function c = continterp(c,varargin)
 % Inputs: (* = required)
 %  *c - cont struct to be interpolated
 %  'timewin' - start/end time of resulting cdat (default same as input)
-%  *'nsamps'/'samplerate' - number of samples or sampling rate (in Hz) for cout.
+%  *'nsamps'/'samplerate' - number of samples or sampling rate (in Hz) for c_out.
 %  'method', interpolation method ({'pchip'}, 'spline', 'linear', 'nearest' etc)
-%      (NB: spline will propagate NaNs through all data)
+%      (NB: 'spline' not recommended; will propagate NaNs through all 
+%      data, result in inaccurate nbad_start/nbad_end estimates)
 %
 %  Uncommon optional inputs:
 %  'resampbeforeinterp', should we resample near new samplerate before
@@ -23,9 +24,10 @@ function c = continterp(c,varargin)
 %  'extrapval': argument to interp1. In unusual cases, can end up needing to extrapolate
 %      first/last sample. Default is 'Nan', [] means to omit the extrapval 
 %      argument, allowing extrapolation when  using 'method' pchip or spline.
+%      Including this argument suppresses the warning about extrapolation.
 %
 %  Outputs:
-%  cout - cont struct with new timebase
+%  c_out - cont struct with new timebase
   
 % Tom Davidson <tjd@stanford.edu> 2003-2010
 
@@ -37,7 +39,7 @@ function c = continterp(c,varargin)
       'nsamps', [],...
       'samplerate',[],...
       'resampbeforeinterp', true,...
-      'extrapval', NaN,...
+      'extrapval', [],...
       'method', 'pchip');
   
   a = parseArgsLite(varargin,a);
@@ -47,6 +49,13 @@ function c = continterp(c,varargin)
 % $$$       warning('no timewin provided interpolating entire cont struct');
 % $$$     end
     a.timewin = [c.tstart c.tend];
+  end
+  
+  if isempty(a.extrapval),
+      extrapwarn = true;
+      a.extrapval = NaN;
+  else
+      extrapwarn = false;
   end
   
   if strcmp(lower(a.method), 'cubic')
@@ -71,11 +80,12 @@ function c = continterp(c,varargin)
         a.timewin(1) == c.tstart &&...
         a.timewin(2) == c.tend
     disp('No interpolation needed.');
+    c_out = c;
     return;
   end
   
-  if a.timewin(1)<c.tstart || a.timewin(2)>c.tend,
-      error('Requested timewin [%g %g] outside input cdat range [%g %g]',...
+  if a.timewin(1)<c.tstart || a.timewin(2)>c.tend && extrapwarn,
+      warning('Requested timewin [%g %g] outside input cdat range [%g %g], data will be padded with ''extrapval''',...
           a.timewin(1), a.timewin(2), c.tstart, c.tend);
   end
   
@@ -128,7 +138,7 @@ function c = continterp(c,varargin)
   c.data(isnan(c.data)) = -Inf;
   
   % do it channel-by-channel to save memory
-  for k = nchans:-1:1 % reverse order so that first loop preallocates
+  for k = nchans:-1:1 % reverse loop so that first iteration preallocates
     % blech: interp1 returns data in a row for vector inputs, 
     % last argument says use NaN for extrapolated values
     if ~isempty(a.extrapval)
@@ -137,25 +147,44 @@ function c = continterp(c,varargin)
       newdata(:,k) = interp1(x,c.data(:,k), xi, a.method);
     end
   end
-    
-  c.data = newdata;
+   
+  c_out = c; % initialize with old cont struct
+  c_out.data = newdata;
   
-  c.tstart = xi(1);
-  c.tend = xi(end);
-  c.samplerate = samplerate_effective;
-  
-  % hard to say where the bad samples ended up
-  c.nbad_start = NaN;
-  c.nbad_end = NaN;
-  
+  c_out.tstart = xi(1);
+  c_out.tend = xi(end);
+  c_out.samplerate = samplerate_effective;
+
   % Avoid attempting to crop past end of data in case where there was no
   % padding data (e.g. when interping to end of data)
-  if a.timewin(2) > c.tend,
-      a.timewin(2) = c.tend;
+  if a.timewin(2) > c_out.tend,
+      a.timewin(2) = c_out.tend;
   end
   
-  % crop data more tightly using a.timewin
-  c = contwin(c, a.timewin, 'samps_nearest');
+  % recrop data more tightly using a.timewin (remove any timewin padding)
+  c_out = contwin(c_out, a.timewin, 'samps_nearest');
 
+  % calculate nbad_start/_end
+  
+  % find *time* of good/bad samples (after any possible filtering in this 
+  % function).
+  timewin_good(1) = c.tstart + (c.nbad_start-1)./c.samplerate;
+  timewin_good(2) = c.tend - (c.nbad_end-1)./c.samplerate;
+  
+  % Excldue extra one sample (in underlying interp'd signal) to deal with 
+  % effects of interpolation at edge of bad data. NB: Not totally 
+  % conservative; e.g. pchip effects could last >1 sample but seems OK.
+  timewin_good = timewin_good + ([1 -1] ./ c.samplerate);
+  
+  % Use these *times* to find nbad_start/end in output (if any)
+  % (Bracket timewin with floor/ceil because we are reporting the number
+  % of *bad* samples)
+  c_out.nbad_start = max(0, floor( c_out.samplerate .* (timewin_good(1) - c_out.tstart)));
+  c_out.nbad_end   = max(0, ceil( c_out.samplerate .* (c_out.tend - timewin_good(2))));
+
+  
+  % may not be necessary?
+  c_out = contdatarange(c_out);
+  
   % data integrity check
-  contcheck(c);
+  contcheck(c_out);
