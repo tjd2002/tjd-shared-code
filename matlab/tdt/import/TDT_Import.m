@@ -61,18 +61,19 @@ S = TDT_Import(filepath, tank, blk, event, chans)
 %   -TDT_ImportSnippet
 %  Possibly make TDT_Import be a dispatcher for these.
 %
-% -Select channels/timewins *during loading* (to avoid out-of-memory conditions)
 % -Check out TDT-provided SEV2mat.m (which reads .sev files, and doesn't use ActiveX!)
-% -Handle intermittently recorded Waves (using timestamps field)
+%
+% MAYBE:
+% -Handle intermittently recorded Waves? (using timestamps field)
 % -Handle epoc_store secondary stores (what format code? where is the
 % non-strobe data stored???)
-% -Handle SlowStores (same issue as epoc_store?) OpenEx DataList internally
 % -convert formats to string. (OpenDeveloper manual EvTypeToString)
 % -Load in chunks to avoid out-of-memory errors? (like TDT2mat)
-% -separate function to get list of store names
+% -Call separate function to get list of store names?
 %
 % DONE:
-% -'info' field for true start time, etc?
+% -Select channels/timewins *during loading* (to speed things up and avoid 
+%  out-of-memory conditions)
 % -save a lot of memory by having fread use correct Matlab types (single,
 %  uint32, etc.) instead of double for everything. Both .tsq and .tev
 % -un-bufferize wave data
@@ -111,8 +112,12 @@ S = struct(...
     'buff_channel', [],...
     'buff_data', [],...
     'buff_npoints', [],...
-    't_rec_start_UnixTime', [],...
-    't_rec_start_UTC', [],...
+    't_block_start', [],...
+    't_block_end', [],...
+    't_block_start_UnixTime', [],...
+    't_block_end_UnixTime', [],...
+    't_block_start_UTC', [],...
+    't_block_end_UTC', [],...
     'max_ts_err', []);
 
 % open the files
@@ -161,8 +166,13 @@ data.frequency = fread(tsq, [ntsq 1], '*float',  recsize_bytes-4);
 % Second entry in the .tsq file always contains the timestamp of the start 
 % of the block. TDT timestamps are in Unix time (seconds elapsed since 
 % January 1, 1970 -- http://en.wikipedia.org/wiki/Unix_time )
-S.t_rec_start_UnixTime = data.timestamp(2);
-S.t_rec_start_UTC = [datestr(S.t_rec_start_UnixTime/86400 + datenum(1970,1,1)) 'Z'];
+S.t_block_start = 0;
+S.t_block_start_UnixTime = data.timestamp(2);
+S.t_block_start_UTC = [datestr(S.t_block_start_UnixTime/86400 + datenum(1970,1,1)) 'Z'];
+
+S.t_block_end_UnixTime = data.timestamp(end);
+S.t_block_end_UTC = [datestr(S.t_block_end_UnixTime/86400 + datenum(1970,1,1)) 'Z'];
+S.t_block_end = S.t_block_end_UnixTime - S.t_block_start_UnixTime;
 
 allnames = unique(data.name,'rows');
 % exclude 'names' that contain ASCII Null character (==0), these are 
@@ -200,10 +210,38 @@ format_idx = S.format_code+1; % from 0-based to 1-based for table lookup
 
 S.storename = name;
 S.sampling_rate = double(data.frequency(first_row));
-S.buff_timestamps    = data.timestamp(row);
-S.buff_channel      = data.chan(row);
 
+
+% Select data to load (i.e. 'rows') based on channel #
+
+% Which channels are present in the file? 
+buff_channels      = data.chan(row);
+allchans = sort(unique(buff_channels))';
+
+% validate requested channels
+if isempty(chans) % default to all channels, sorted
+    chans = allchans;
+elseif ~all(ismember(chans, allchans)),
+    % error: display bad values
+    fprintf('Chans available: %s\n', num2str(allchans));
+    fprintf('Chans requested: %s\n', num2str(chans));
+    error('Requested ''chans'' channels not present for store named ''%s''', name);
+end
+nchans = numel(chans);
+
+% Select only the rows containing the requested channels (logical &)
+row = row & ismember(data.chan, chans);
+
+
+% Report which channels are included in the output
+S.chans = chans;
+
+% Get pointers into .tev data file for start of each row's (buffer's) data
 fp_loc  = data.fp_loc(row);
+
+% Get timestamp of each buffer
+S.buff_timestamps = data.timestamp(row);
+S.buff_channel = data.chan(row);
 
 if S.format_code ~=4
   nsample = ((4 .* data.size(first_row)) - 40) ./ table{format_idx,2};
@@ -214,46 +252,26 @@ if S.format_code ~=4
     S.buff_data(n,1:nsample) = fread(tev,[1 nsample],table{format_idx,3});
   end
   S.buff_npoints = double(nsample);
-else % epoc_stores and slow_stores have their data as a float in the 'strobe' field.
+
+else % (S.format_code ==4) epoc_stores and slow_stores have their data as a float in the 'strobe' field.
   S.buff_data = data.strobe(row);
   S.buff_npoints = 1;
-  % epoc_store events list all strobe data as channel 0; 
-  % slow_store events use channel numbering
-  S.buff_channel = data.chan(row);
+  % epoc_store events list all strobe data as channel 0; let's call it 1
+  % slow_store events use normal channel numbering
   if all(S.buff_channel == 0),
       S.buff_channel = repmat(1, size(S.buff_channel));
   end
 end
 
-% Which channels are present in the file? 
-allchans = sort(unique(S.buff_channel))';
-
-% % 0: continuously-sampled 'Wave' store
-% % Can we unbufferize other formats like slow_stores?
-% if any(S.format_code == [0 4]);
-% 
-% validate requested channels
-if isempty(chans) % default to all channels, sorted
-    chans = allchans;
-elseif ~all(ismember(chans, allchans)),
-    % error: display bad values
-    fprintf('Chans available: %s\n', num2str(allchans));
-    fprintf('Chans requested: %s\n', num2str(chans));
-    error('Requested ''chans'' channels not present for store named ''%s''', name);
-end
-
-nchans = numel(chans);
-
 % how many buffers per channel? (calculate for first channel)
 chanione = S.buff_channel==chans(1);
 nbuffs = sum(chanione);
 
-% initialize 3-D array (bufferno, bufferlen, chan)
+% initialize 3-D data array for buffered data (nbuffers, bufferlen, nchans)
 dat = zeros(nbuffs, S.buff_npoints, nchans, class(S.buff_data));
 
-% iterate over all channels
+% iterate over requested channels, preserving requested channel order
 for k = 1:nchans,
-    % keep user order of channels requested
     chan = chans(k);
     chani = S.buff_channel==chan;
     if sum(chani) ~= nbuffs,
@@ -264,19 +282,18 @@ for k = 1:nchans,
     dat(:,:,k) = S.buff_data(chani,:);
 end
 
-% Report which channels are included in the output
-S.chans = chans;
-
 % reshape buffered data into single columns, one per channel
+% The one-liner below is equivalent to:
 %     datp = permute(dat,[2 1 3]);
 %     datpr = reshape(datp,[],nchans);
-%     dat = datpr;
+%     S.data = datpr;
+%     clear datp datpr;
 S.data = reshape(permute(dat,[2 1 3]), [], nchans);
 
 % Process timestamps
 ts = S.buff_timestamps(chanione);
 % convert from TDT timestamps to 'seconds from block start'
-ts = ts-S.t_rec_start_UnixTime;
+ts = ts-S.t_block_start_UnixTime;
 
 if S.format_code == 0,    % Check for missing timestamps (one per buffer)
     ts_syn = linspace(ts(1),ts(end), numel(ts))'; % 'synthetic' timestamps
@@ -300,15 +317,14 @@ if S.format_code == 0,    % Check for missing timestamps (one per buffer)
     
 elseif S.format_code == 4,
     S.timestamps = ts;
-    % Give start/end of recording as tstart/tend
-    S.tstart = 0;
-    S.tend = data.timestamp(end)-S.t_rec_start_UnixTime;
-    
-    S.sampling_rate = NaN; % not sampled data
-    S.max_ts_err = NaN; % not sampled data
+    % n/a, not sampled data
+    S.tstart = NaN;
+    S.tend = NaN;
+    S.sampling_rate = NaN;
+    S.max_ts_err = NaN;
 else
     error('Unhandled TDT data format');
 end
 
-% discard some fields we don't want to return for 'wave's
+% discard buffered data before returning
 S = rmfield(S, {'buff_npoints', 'buff_channel', 'buff_data', 'buff_timestamps'});
