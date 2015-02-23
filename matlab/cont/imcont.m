@@ -50,7 +50,7 @@ function [c timestamp ts_syn] = imcont(varargin)
 %    'nexfile' - filename of .nex file
 %
 %   TDT 'wave' event data struct, as imported by Tom's tdt2mat function
-%    'TDTwave' struct
+%    'tdtwave' struct
 %    'chans' - vector of channels to use (import all by default)
 %    Effect on other inputs:
 %     'timeunits' = 'seconds'
@@ -620,7 +620,7 @@ switch mode
   case 'tdt'
     
     % is this a continuously-sampled 'Wave' store?
-    if a.tdtwave.format ~= 1
+    if a.tdtwave.info.format_code ~= 0
       error('Provided event struct is not of type ''Wave'' -- is it an event list?');
     end
     
@@ -693,9 +693,7 @@ switch mode
     c.max_tserr = a.tdtwave.max_ts_err;
     
     % save TDT-specific info
-    c.tdtinfo.block_start_unixtime = a.tdtwave.t_rec_start;
-    c.tdtinfo.block_start_datestr = [datestr(a.tdtwave.t_rec_start/86400 + datenum(1970,1,1)) 'Z'];
-    c.tdtinfo.format_code = a.tdtwave.format;
+    c.tdtinfo = a.tdtwave.info;
     
     % Don't do additional processing--it was done in call out to imcont
     return;

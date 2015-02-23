@@ -1,5 +1,5 @@
 function S = TDT_Import(filepath, tank, blk, name, chans, timewin,...
-    return_timestamps);
+    return_timestamps)
 %% TDT_Import.m %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 % Import data from TDT system recording into Matlab structure
 %
@@ -107,18 +107,12 @@ S = struct(...
     'timestamps', [],...
     'sampling_rate', [],...
     ...
-    'format_code', [],...
     'buff_timestamps', [],...
     'buff_channel', [],...
     'buff_data', [],...
     'buff_npoints', [],...
-    't_block_start', [],...
-    't_block_end', [],...
-    't_block_start_UnixTime', [],...
-    't_block_end_UnixTime', [],...
-    't_block_start_UTC', [],...
-    't_block_end_UTC', [],...
-    'max_ts_err', []);
+    'max_ts_err', [],...
+    'info', []);
 
 % open the files
 tev = fopen(tev_path);
@@ -166,13 +160,7 @@ data.frequency = fread(tsq, [ntsq 1], '*float',  recsize_bytes-4);
 % Second entry in the .tsq file always contains the timestamp of the start 
 % of the block. TDT timestamps are in Unix time (seconds elapsed since 
 % January 1, 1970 -- http://en.wikipedia.org/wiki/Unix_time )
-S.t_block_start = 0;
-S.t_block_start_UnixTime = data.timestamp(2);
-S.t_block_start_UTC = [datestr(S.t_block_start_UnixTime/86400 + datenum(1970,1,1)) 'Z'];
-
-S.t_block_end_UnixTime = data.timestamp(end);
-S.t_block_end_UTC = [datestr(S.t_block_end_UnixTime/86400 + datenum(1970,1,1)) 'Z'];
-S.t_block_end = S.t_block_end_UnixTime - S.t_block_start_UnixTime;
+ts_block_start = data.timestamp(2);
 
 allnames = unique(data.name,'rows');
 % exclude 'names' that contain ASCII Null character (==0), these are 
@@ -205,8 +193,8 @@ table = { 'float',   4,     'float=>single',  'single'; % 0
           'qword'    8,     'int64=>int64',   'int64'}; % 5 not seen in the wild
 
 first_row = find(row,1);
-S.format_code    = data.format(first_row); 
-format_idx = S.format_code+1; % from 0-based to 1-based for table lookup
+format_code = data.format(first_row); 
+format_idx = format_code+1; % from 0-based to 1-based for table lookup
 
 S.storename = name;
 S.sampling_rate = double(data.frequency(first_row));
@@ -243,23 +231,23 @@ fp_loc  = data.fp_loc(row);
 S.buff_timestamps = data.timestamp(row);
 S.buff_channel = data.chan(row);
 
-if S.format_code ~=4
+if format_code ~=4
   nsample = ((4 .* data.size(first_row)) - 40) ./ table{format_idx,2};
   if rem(nsample,1), error('Non-integer number of samples--problem with size calculation'); end
   S.buff_data = zeros(length(fp_loc),nsample, table{format_idx,4});
   for n=1:length(fp_loc)
     fseek(tev,fp_loc(n),'bof');
-    S.buff_data(n,1:nsample) = fread(tev,[1 nsample],table{format_idx,3});
+    S.buff_data(n,1:nsample) = fread(tev,[1 nsample],table{format_idx,3}); %#ok
   end
   S.buff_npoints = double(nsample);
 
-else % (S.format_code ==4) epoc_stores and slow_stores have their data as a float in the 'strobe' field.
+else % (format_code ==4) epoc_stores and slow_stores have their data as a float in the 'strobe' field.
   S.buff_data = data.strobe(row);
   S.buff_npoints = 1;
   % epoc_store events list all strobe data as channel 0; let's call it 1
   % slow_store events use normal channel numbering
   if all(S.buff_channel == 0),
-      S.buff_channel = repmat(1, size(S.buff_channel));
+      S.buff_channel = ones(size(S.buff_channel));
   end
 end
 
@@ -268,7 +256,7 @@ chanione = S.buff_channel==chans(1);
 nbuffs = sum(chanione);
 
 % initialize 3-D data array for buffered data (nbuffers, bufferlen, nchans)
-dat = zeros(nbuffs, S.buff_npoints, nchans, class(S.buff_data));
+dat = zeros(nbuffs, S.buff_npoints, nchans, class(S.buff_data)); %#ok
 
 % iterate over requested channels, preserving requested channel order
 for k = 1:nchans,
@@ -293,13 +281,13 @@ S.data = reshape(permute(dat,[2 1 3]), [], nchans);
 % Process timestamps
 ts = S.buff_timestamps(chanione);
 % convert from TDT timestamps to 'seconds from block start'
-ts = ts-S.t_block_start_UnixTime;
+ts = ts-ts_block_start;
 
-if S.format_code == 0,    % Check for missing timestamps (one per buffer)
+if format_code == 0,    % Check for missing timestamps (one per buffer)
     ts_syn = linspace(ts(1),ts(end), numel(ts))'; % 'synthetic' timestamps
     S.max_ts_err = max(abs(ts_syn-ts));
     
-    if S.max_ts_err > 1./S.sampling_rate;
+    if S.max_ts_err > 1/S.sampling_rate;
         error('Timestamp error: at least one sample gap or repeat');
     end
     
@@ -315,7 +303,7 @@ if S.format_code == 0,    % Check for missing timestamps (one per buffer)
             numel(S.data));
     end
     
-elseif S.format_code == 4,
+elseif format_code == 4,
     S.timestamps = ts;
     % n/a, not sampled data
     S.tstart = NaN;
@@ -325,6 +313,34 @@ elseif S.format_code == 4,
 else
     error('Unhandled TDT data format');
 end
+
+% Save out some TDT-specific info
+info = struct(...
+    'path_to_block', [],...
+    'format_code', [],...
+    't_block_start', [],...
+    't_block_end', [],...
+    't_block_start_UnixTime', [],...
+    't_block_end_UnixTime', [],...
+    't_block_start_UTC', [],...
+    't_block_end_UTC', [],...
+    'args',[]);
+    
+info.path_to_block = [filepath filesep tank filesep blk filesep];
+info.args.timewin = timewin;
+info.args.chans = chans;
+
+info.format_code = format_code;
+info.t_block_start = 0;
+info.t_block_start_UnixTime = ts_block_start;
+info.t_block_start_UTC = [datestr(info.t_block_start_UnixTime/86400 + datenum(1970,1,1)) 'Z'];
+
+% last row is a special stop code, with timestamp of end of recording
+info.t_block_end_UnixTime = data.timestamp(end);
+info.t_block_end_UTC = [datestr(info.t_block_end_UnixTime/86400 + datenum(1970,1,1)) 'Z'];
+info.t_block_end = info.t_block_end_UnixTime - info.t_block_start_UnixTime;
+
+S.info = info;
 
 % discard buffered data before returning
 S = rmfield(S, {'buff_npoints', 'buff_channel', 'buff_data', 'buff_timestamps'});
