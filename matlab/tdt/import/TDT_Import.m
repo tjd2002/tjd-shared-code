@@ -248,6 +248,7 @@ else % (format_code ==4) epoc_stores and slow_stores have their data as a float 
   % slow_store events use normal channel numbering
   if all(S.buff_channel == 0),
       S.buff_channel = ones(size(S.buff_channel));
+      chans(chans==0)=1;
   end
 end
 
