@@ -28,3 +28,6 @@ function c = contdatarange(c)
     end
   end
   
+  if isempty(c.datarange) % as when there are no good samples
+      c.datarange = nan(size(c.data,2),2);
+  end
