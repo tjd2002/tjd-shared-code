@@ -25,7 +25,7 @@ if ~isempty(vid.DiskLogger)
   if TDT_FrameCnt == Vid_FrameCnt,
     disp(sprintf('OK! TDT/Video frame counts match: %d\n', TDT_FrameCnt)); 
   else
-    error(sprintf('Frame Count mismatch: TDT = %d; Video file = %d\n', TDT_FrameCnt, Vid_FrameCnt)); 
+    warning(sprintf('Frame Count mismatch: TDT = %d; Video file = %d\n', TDT_FrameCnt, Vid_FrameCnt)); 
   end
   % delete logger so that we don't accidentally keep recording into it.
   vid.DiskLogger = [];

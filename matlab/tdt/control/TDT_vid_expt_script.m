@@ -40,9 +40,9 @@
 [xDA] = TDT_Init;
 %SETUP TANK LOCATION (ADDTANK?)
 %[vid, src] = TDT_VidInit('Mono8', 20,40,3,0); % format, fps, exposure, binning
-[vid src] = TDT_VidInit('BayerRG8', 20,20,2,10); % format, fps, exposure, binning, gain
+[vid src] = TDT_VidInit('BayerRG8', 20,50,2,20); % format, fps, exposure (ms), binning, gain
 
-%% Preview
+%% Preview / Stop recording
 TDTvid_ToPreview(xDA,vid);
 
 %% Record
