@@ -29,21 +29,29 @@ matlab/
 |-cont/
 |  Library of signal processing code (cdats, etc).
 |
-|-misc/
-  Miscellaneous shared code
+|-tdt/
+|  Code to control TDT OpenEx from Matlab, and to import TDT data.
+|
+|-photometry/
+|  Code to process recorded fiber photometry data (relies on signal 
+|  processing lib in 'cont')
 
 
 *** Dependencies:
 
- -mwl-import code requires Fabian Kloosterman's mwlIO library for reading and creating
-  AD-style data files. (known to work with version in SVN repo as of Aug. 2009)
+ -I am currently running Matlab R2014b, and I don't try to maintain 
+  backwards compatibility, so no guarantees about supporting older versions.
+  (That said, code that I haven't run in a while may not be updated to work
+  on latest Matlab!)
 
- -Matlab toolboxes from R2007a or later:
+ -Matlab toolboxes:
    Filter Design Toolbox
    Image Processing Toolbox
    Signal Processing Toolbox
    Statistics Toolbox
-   Spline Toolbox
+
+ -mwl-import code requires Fabian Kloosterman's mwlIO library for reading and creating
+  AD-style data files. (known to work with version in SVN repo as of Aug. 2009)
 
 
 Any questions, or if you'd like to check in bug fixes/improvements, email
