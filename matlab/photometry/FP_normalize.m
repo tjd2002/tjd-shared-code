@@ -52,6 +52,14 @@ if isempty(a.control_LP_F)
     error('Must provide transition band for lowpass filter ''control_LP_F''. Try: [0.1 0.2]');
 end
 
+if isempty(a.rig_baseline_V)
+    a.rig_baseline_V = [0 0];
+end
+
+if numel(a.rig_baseline_V) ~=2,
+    error('Must provide 2 values for ''rig_baseline_V'', or leave it empty');
+end
+
 switch c_Mag.units
     case {'V'}, 
         c_Mag.units = 'V';
