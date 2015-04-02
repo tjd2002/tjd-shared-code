@@ -1,4 +1,4 @@
-function [hs zlims] = draw2d(varargin)
+function [hs, zlims] = draw2d(varargin)
 % DRAW2D plot 2-D data, w/ shading, linear/log scale... (chooses
 % image/surf as needed). See code for input options
 %
@@ -31,8 +31,8 @@ function [hs zlims] = draw2d(varargin)
       'whitebg', false,... % used only for 3d slices
       ...
       'contour', false,... % draw data as a contour plot
-      'ncontours', [],...
-      'contourvals', 5,... % default # of contour values
+... %      'ncontours', 5,... % not supported yet
+      'contourvals', [],... % default # of contour values
       'ylog', false,...  % draw data with a logarithmic scale in x- or y-axis
       'xlog', false,...  % 
       'ydir', 'normal', ... % y-axis ascending ('normal') or descending ('reverse')
@@ -330,7 +330,7 @@ function [hs zlims] = draw2d(varargin)
     
     if a.contour,
       % draw just like surf with 'interp', using centers
-      [dummy h] = contour(a.ax,...
+      [contours h] = contour(a.ax,...
                           a.xhistctrs,... 
                           a.yhistctrs,...
                           a.data,...
