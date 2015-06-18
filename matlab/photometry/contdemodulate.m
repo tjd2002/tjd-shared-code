@@ -30,6 +30,7 @@ function [c_Mag, Ref_F, PSDs, cache] = contdemodulate(c_Raw, varargin)
 %                    product detectors (default = 2)
 %'recover_carriers_from_signal': Recover carrier frequencies from input
 %                    signal, ignore provided references. (default: false)
+%'downsample_outputs': Automatically downsample outputs. (default: true)
 %           'cache': object cache containing previously-designed filters,
 %                    etc.
 %
@@ -51,7 +52,7 @@ function [c_Mag, Ref_F, PSDs, cache] = contdemodulate(c_Raw, varargin)
 % TODO:
 % -pass out estimated resultant Freqz for all processing.
 % -Implement with iFFT instead of bandpass/product detectorr/LPF
-% -Generate references from given frequencies (avoid recording RefX),
+% -Generate references from given frequencies (avoid recording RefX/RefY),
 %  needed for recover_carriers_from_signal', too.
 % -Handle DC as special case? Freq 0? Same LPF (code commented out below)
 %
@@ -75,6 +76,7 @@ function [c_Mag, Ref_F, PSDs, cache] = contdemodulate(c_Raw, varargin)
       'nsignals', [],...
       'bandwidth_F', [],...
       'recover_carriers_from_signal', false,...
+      'downsample_outputs', true,...
       'atten_db', -50,...
       'ripp_db', 0.1,...
       'LPF_repeat', 2,...
@@ -228,6 +230,10 @@ for j = 1:a.nsignals,
 end
 
 c_Mag = contcombine(c_Mag(1), c_Mag(2:end), 'name', [c_Raw.name '_Demod']);
+
+if ~a.downsample_outputs
+    c_Mag = continterp(c_Mag, 'samplerate', c_Raw.samplerate);
+end
 
 % debug: upsample to original input frequency and take PSD:
 c_temp = continterp(c_Mag, 'samplerate', c_Raw.samplerate);
