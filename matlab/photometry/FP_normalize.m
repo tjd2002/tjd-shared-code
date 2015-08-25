@@ -31,7 +31,7 @@ function [c_out c_Regress bls YFit] = FP_normalize(c_Mag, varargin)
 %                          'nsignals', 2,'bandwidth_F', [10 15])
 %
 %   c_dFF = FP_normalize(c_Mag,...
-%                        'control_LP_F', [0.1 0.2],...
+%                        'control_LP_F', [2 3],...
 %                        'norm_type', 'fit');
 %
 %   c_dFF = contwin(c_dFF,[],'samps_good');
@@ -82,9 +82,9 @@ ch_iso = 2;
 c_Mag.data = bsxfun(@minus, c_Mag.data, a.rig_baseline_V([ch_sig ch_iso]));
 c_Mag = contdatarange(c_Mag);
 
-% downsample, apply 'very-low-pass' filter, then upsample
-fopt_vlp = mkfiltopt('filttype', 'lowpass', 'F', a.control_LP_F, 'name', 'VLP','atten_db', 40);
-c_Mag_F_ds = contfilt(c_Mag, 'filtopt', fopt_vlp, 'autoresample', true);
+% downsample, apply 'low-pass' filter, then upsample
+fopt_lp = mkfiltopt('filttype', 'lowpass', 'F', a.control_LP_F, 'name', 'LP','atten_db', 40);
+c_Mag_F_ds = contfilt(c_Mag, 'filtopt', fopt_lp, 'autoresample', true);
 
 % upsample smoothed control signal to match original
 c_Mag_F = continterp(c_Mag_F_ds,...
@@ -151,7 +151,7 @@ switch a.norm_type
         error('Unrecognized ''norm_type'' argument');
 end
 
-% Optionally shift baselin (to nth percentile of valid data) to make 
+% Optionally shift baseline (to nth percentile of valid data) to make 
 % comparable to usual deltaF/F measures
 if ~isempty(a.dFF_zero_prctile);
     Y_dFF_valid = Y_dFF_all([c_Mag_F.nbad_start+1:end-c_Mag_F.nbad_end]);

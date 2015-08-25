@@ -23,7 +23,7 @@ cfg.demod_atten_db = 50;
 
 % parameters to FP_normalize.m
 cfg.FPnorm_norm_type = 'fit';
-cfg.FPnorm_control_LP_F = [0.1 0.2];
+cfg.FPnorm_control_LP_F = [2 3];
 cfg.FPnorm_original_timewin = false;
 cfg.FPnorm_dFF_zero_prctile = []; % [] = do not re-zero
 
@@ -43,6 +43,7 @@ c_FP_Raw = imcont('tdtwave', S, ...
     'dataunits', 'V');
 fprintf('-->Done!\n');
 
+%%
 fprintf('Demodulating raw photometry signal ...\n');
 % Demodulate raw detector signal.
 [c_Mag, FP_Ref_F, FP_PSDs, cache] = ...
