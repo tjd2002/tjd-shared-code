@@ -8,9 +8,9 @@
 % see function documentation for information on what each param means
 
 % set up directory names to find your data
-tanksdir = ['/Volumes/Daisy Lake/Data/ChatRat Photometry/NNLFP-FP-Feb2015/DataTanks/'];
+tanksdir = ['/users/tjd/Data/ChatRat-FP-2015-Raw/DataTanks/'];
 tankname = 'NNLFP-FP-Feb2015_DT2_021315';
-blockname = 'Blk-1';
+blockname = 'Blk-5';
 
 % labels for each channel in store 'Raw1'
 Raw1_chanlabels = {'Det1', 'Ref1X', 'Ref1Y', 'Ref2X', 'Ref2Y', 'X1', 'Y1'};
