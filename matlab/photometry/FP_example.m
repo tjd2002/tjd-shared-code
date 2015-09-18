@@ -8,12 +8,24 @@
 % see function documentation for information on what each param means
 
 % set up directory names to find your data
-tanksdir = ['/users/tjd/Data/ChatRat-FP-2015-Raw/DataTanks/'];
-tankname = 'NNLFP-FP-Feb2015_DT2_021315';
-blockname = 'Blk-5';
+% tanksdir = ['/users/tjd/Data/ChatRat-FP-2015-Raw/DataTanks/'];
+% tankname = 'NNLFP-FP-Feb2015_DT2_021315';
+% blockname = 'Blk-5';
+% Raw1_chanlabels = {'Det1', 'Ref1X', 'Ref1Y', 'Ref2X', 'Ref2Y', 'X1', 'Y1'};
+
+tanksdir = ['/Volumes/DATA_EXT2/FP-Protocols-Raw/DataTanks/'];
+tankname = 'FP-Vid-RX8-Jul2015_DT1_072115';
+blockname = 'Blk-11';
+Raw1_chanlabels = {'Det1', 'Ref1X', 'Ref1Y', 'Ref2X', 'Ref2Y', 'ExcitPower'};
+signal_labels = {'480nm' '405nm'};
+
+% tanksdir = ['/Volumes/DATA_EXT2/'];
+% tankname = 'Kevin';
+% blockname = 'FP_workshop_GCaMP_2';
+% Raw1_chanlabels = {'Det1', 'Ref1X', 'Ref1Y', 'Ref2X', 'Ref2Y'};
+% signal_labels = {'480nm' '405nm'};
 
 % labels for each channel in store 'Raw1'
-Raw1_chanlabels = {'Det1', 'Ref1X', 'Ref1Y', 'Ref2X', 'Ref2Y', 'X1', 'Y1'};
 %Raw1_chanlabels = {'Det1', 'Ref1X', 'Ref1Y', 'Ref2X', 'Ref2Y'}; 
 
 % parameters to contdemodulate.m
@@ -49,6 +61,7 @@ fprintf('Demodulating raw photometry signal ...\n');
 [c_Mag, FP_Ref_F, FP_PSDs, cache] = ...
     contdemodulate(c_FP_Raw, ...
     'nsignals', 2,...
+    'signal_labels', signal_labels,...
     'bandwidth_F', cfg.demod_BW_F,...
     'ripp_db', cfg.demod_ripp_db,...
     'atten_db', cfg.demod_atten_db,...
@@ -65,3 +78,6 @@ fprintf('Normalizing photometry signal ...\n');
     'dFF_zero_prctile', cfg.FPnorm_dFF_zero_prctile);
 fprintf('-->Done!\n');
 
+%% Plot it
+subplot 211; quickplot(c_Mag);
+subplot 212; quickplot(c_dFF);
