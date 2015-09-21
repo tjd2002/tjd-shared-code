@@ -1,5 +1,3 @@
-Welcome to Sam’s change to tom’s readme file!
-
 Welcome to Tom's shared code repository!
 
 You can either manually add the 'matlab' subdirectory and all children to 
