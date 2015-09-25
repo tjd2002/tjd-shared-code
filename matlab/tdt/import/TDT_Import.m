@@ -118,9 +118,16 @@ S = struct(...
 tev = fopen(tev_path);
 tsq = fopen(tsq_path); 
 
+if ~exist(tsq_path,'file'),
+    error('Invalid ''.tsq'' filename: ''%s''', tsq_path);
+end
+if ~exist(tev_path,'file'),
+    error('Invalid ''.tev'' filename: ''%s''', tev_path);
+end
+
 recsize_bytes = 40;
 % count number of tsq records (40 bytes/record)
-fseek(tsq, 0, 'eof'); ntsq = ftell(tsq)/recsize_bytes; 
+fseek(tsq, 0, 'eof'); ntsq = ftell(tsq)/recsize_bytes;
 
 % read from tsq
 fseek(tsq, 0, 'bof');
