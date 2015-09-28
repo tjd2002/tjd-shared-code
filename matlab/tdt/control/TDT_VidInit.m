@@ -56,7 +56,8 @@ src.ExposureTimeAbs = exposure_ms * 1000; % microseconds. 40k = 1/50s
 % src.BinningHorizontal = binning;
 src.DecimationVertical = binning; % reduce frame size
 src.DecimationHorizontal = binning;
-vid.ROIPosition = [0 0 vid.VideoResolution];
+%vid.ROIPosition = [41 0 (vid.VideoResolution-[82 0])];
+vid.ROIPosition = [0 0 (vid.VideoResolution)];
 src.Gain = gain; % 0 - 32; 10 results in reasonably low noise
 
 
@@ -83,7 +84,8 @@ src.FrameStartTriggerMode = 'Off';
 %% set up camera frame sync output to be read by TDT
 
 % Use 'FrameReadout' (time of frame transfer from CCD to camera memory)
-% instead of 'Exposure', because when frame rate is exposure time limited,
-% the 'low' period between frames can be very short, and be missed by 
-% TDT's digital input debouncing, causing frame timestamps to be missed.
+% instead of 'Exposure' to avoid missed frames. (In 'Exposure' mode, when 
+% frame rate is limited by exposure time, the 'low' period between frames 
+% can be very short (~us), and can be ignored by TDT's digital input 
+% debouncing.)
 src.SyncOut1SyncOutSource = 'FrameReadout';
