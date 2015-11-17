@@ -1,5 +1,3 @@
-Wassup
-
 Welcome to Tom's shared code repository!
 
 You can either manually add the 'matlab' subdirectory and all children to 
@@ -41,7 +39,7 @@ matlab/
 
 *** Dependencies:
 
- -I am currently running Matlab R2014b, and I don't try to maintain 
+ -I am currently running Matlab R2015a, and I don't try to maintain 
   backwards compatibility, so no guarantees about supporting older versions.
   (That said, code that I haven't run in a while may not be updated to work
   on latest Matlab!)
@@ -57,9 +55,6 @@ matlab/
 
 
 Any questions, or if you'd like to check in bug fixes/improvements, email
-me at tjd@stanford.edu (or tjd@alum.mit.edu if you are reading this far in
-the future).
+me at tjd@alum.mit.edu .
 
 Tom
-Jan, 2011
-
