@@ -13,20 +13,22 @@
 % blockname = 'Blk-5';
 % Raw1_chanlabels = {'Det1', 'Ref1X', 'Ref1Y', 'Ref2X', 'Ref2Y', 'X1', 'Y1'};
 
-tanksdir = ['/Volumes/DATA_EXT2/FP-Protocols-Raw/DataTanks/'];
-tankname = 'FP-Vid-RX8-Jul2015_DT1_072115';
-blockname = 'Blk-11';
-Raw1_chanlabels = {'Det1', 'Ref1X', 'Ref1Y', 'Ref2X', 'Ref2Y', 'ExcitPower'};
-signal_labels = {'480nm' '405nm'};
+% edit this so it points to the Example Data folder 
+path_to_Example_Data = '/Users/tjd/Google Drive/Fiber Photometry Workshop/Example Data/';
+tanksdir = [path_to_Example_Data '/DataTanks/'];
 
-% tanksdir = ['/Volumes/DATA_EXT2/'];
-% tankname = 'Kevin';
-% blockname = 'FP_workshop_GCaMP_2';
-% Raw1_chanlabels = {'Det1', 'Ref1X', 'Ref1Y', 'Ref2X', 'Ref2Y'};
+% % Example of a GFP control animal
+% tankname = 'FP-Vid-RX8-Jul2015_DT1_072115';
+% blockname = 'Blk-11';
+% Raw1_chanlabels = {'Det1', 'Ref1X', 'Ref1Y', 'Ref2X', 'Ref2Y', 'ExcitPower'};
 % signal_labels = {'480nm' '405nm'};
 
-% labels for each channel in store 'Raw1'
-%Raw1_chanlabels = {'Det1', 'Ref1X', 'Ref1Y', 'Ref2X', 'Ref2Y'}; 
+% Short example of a GCaMP6-expressing mouse
+tankname = 'Kevin';
+blockname = 'FP_workshop_GCaMP_2';
+Raw1_chanlabels = {'Det1', 'Ref1X', 'Ref1Y', 'Ref2X', 'Ref2Y'};
+signal_labels = {'480nm' '405nm isosbestic control'};
+
 
 % parameters to contdemodulate.m
 cfg.demod_BW_F = [10 15];
