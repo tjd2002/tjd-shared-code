@@ -13,32 +13,40 @@
 % blockname = 'Blk-5';
 % Raw1_chanlabels = {'Det1', 'Ref1X', 'Ref1Y', 'Ref2X', 'Ref2Y', 'X1', 'Y1'};
 
-% edit this so it points to the Example Data folder 
+% Edit this path so it points to the 'Example Data' folder from the
+% Fiber Photometry Workshop shared folder on 
 path_to_Example_Data = '/Users/tjd/Google Drive/Fiber Photometry Workshop/Example Data/';
-tanksdir = [path_to_Example_Data '/DataTanks/'];
 
-% % Example of a GFP control animal
+tanksdir = [path_to_Example_Data '/DataTanks/'];
+if ~exist(tanksdir, 'dir'),
+    error('Sample data folder not found at: %s', [path_to_Example_Data tanksdir])
+end
+
+%% Uncomment one of the blocks below to specify sample data to process
+
+% Example1: ~10min of data from a GCaMP6f-expressing mouse
+exptname = 'GCaMP6f-expressing mouse, 20 days post-injection, open field';
+tankname = 'FP-Vid-RX8-Jul2015_DT1_072115';
+blockname = 'Blk-13';
+Raw1_chanlabels = {'Det1', 'Ref1X', 'Ref1Y', 'Ref2X', 'Ref2Y', 'ExcitPower'};
+signal_labels = {'480nm' '405nm'};
+
+% % Example2: ~5min of data from a GFP control mouse
+% exptname = 'GFP-expressing mouse, 20 days post-injection, open field';
 % tankname = 'FP-Vid-RX8-Jul2015_DT1_072115';
 % blockname = 'Blk-11';
 % Raw1_chanlabels = {'Det1', 'Ref1X', 'Ref1Y', 'Ref2X', 'Ref2Y', 'ExcitPower'};
 % signal_labels = {'480nm' '405nm'};
 
-% Short example of a GCaMP6-expressing mouse
-tankname = 'Kevin';
-blockname = 'FP_workshop_GCaMP_2';
-Raw1_chanlabels = {'Det1', 'Ref1X', 'Ref1Y', 'Ref2X', 'Ref2Y'};
-signal_labels = {'480nm' '405nm isosbestic control'};
 
+%% demodulation parameters (see contdemodulate.m for documentation)
+cfg.demod_BW_F = [10 15]; % bandwidth (Hz)
+cfg.demod_ripp_db = 0.1; % filter design parameter: bandpass ripple
+cfg.demod_atten_db = 50; % filter design parameter: stopband rejection
 
-% parameters to contdemodulate.m
-cfg.demod_BW_F = [10 15];
-cfg.demod_ripp_db = 0.1;
-cfg.demod_atten_db = 50;
-
-% parameters to FP_normalize.m
-cfg.FPnorm_norm_type = 'fit';
-cfg.FPnorm_control_LP_F = [2 3];
-cfg.FPnorm_original_timewin = false;
+% normalization parameters (see FP_normalize.m for documenation)
+cfg.FPnorm_norm_type = 'fit'; % type of normalization to perform
+cfg.FPnorm_control_LP_F = [2 3]; % low-pass filter transition band (Hz)
 cfg.FPnorm_dFF_zero_prctile = []; % [] = do not re-zero
 
 % baseline rig fluorescence for each channel with animal not plugged in, 
@@ -78,8 +86,42 @@ fprintf('Normalizing photometry signal ...\n');
     'original_timewin', cfg.FPnorm_original_timewin,...
     'rig_baseline_V', cfg.rig_baseline_V,...
     'dFF_zero_prctile', cfg.FPnorm_dFF_zero_prctile);
+
 fprintf('-->Done!\n');
 
 %% Plot it
-subplot 211; quickplot(c_Mag);
-subplot 212; quickplot(c_dFF);
+
+% scale the raw inputs according to the regression (for plotting)
+c_Mag_scaled = contcombine(...
+    contchans(c_Regress, 'chans', 1),...
+    contfn(contchans(c_Regress, 'chans', 2), 'fn', @(x) x.*bls(1)+bls(2)));
+
+figure('Position', [0 0 900 500]);
+sp(1) = subplot(3,1,1); 
+title(exptname);
+quickplot(contfn(c_Mag, 'fn', @(x)x*1000),...
+    'color', [0.3 0.3 1.0; 1 0.3 1],...
+    'subsample', false);
+ylabel({'Fluorescence amplitude' '(mV at Detector)'})
+yl = ylim;
+ylim([0 yl(2)*1.1]); % show y=0
+lh(1) = legend;
+lh(1).Location = 'SouthWest';
+lh(1).Interpreter = 'none';
+
+sp(2) = subplot (3,1,2); quickplot(contfn(c_Mag_scaled, 'fn', @(x)x*1000),...
+    'color', [0.3 0.3 1.0; 1 0.3 1]),...
+    'subsample', false;
+title('Best fit of smoothed isosbestic control to signal channel');
+ylabel({'Fluorescence amplitude'  '(scaled)'});
+lh(2) = legend;
+lh(2).Location = 'NorthEast';
+lh(2).Interpreter = 'none';
+
+sp(3) = subplot (3,1,3); quickplot(c_dFF, ...
+    'subsample', false, ...
+    'color', [0.3 0.6 0.3]); 
+ylim([-0.1 0.25]) % common dF/F range
+title('Normalized signal');
+ylabel('dF/F');
+linkaxes(sp, 'x')
