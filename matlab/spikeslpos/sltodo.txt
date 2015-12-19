@@ -1,0 +1,120 @@
+TODO:
+   -clnos/excludecls/? as dedicated helper fn
+   -'tcthresh' make this an operation performed for each
+    parmest/raster plot, on its tunecurves/clnos (**), according to
+    some fn on the tcdats (part of plot? plot editor?)
+   -'randperm'/'pfperm' (cf objtodo/parmest,raster)
+   -refactor slkeypress
+   -yzoom. test tc.tuneparam to see which ones to zoom? add ylim field
+    to a.plots. Also passed in to mkraster/mkparmest?
+   -datalims across contplots?
+   -rename 'runspeed' argument to e.g. filtparamval? No, move this out
+    of spikeslpos
+   -slmkplots needs to accept args, template
+
+BUGS:
+   -where is resize on first drawing of slp coming from? (everything
+    cached, no biggie)
+
+NEW PLOTS:
+   -ylevels for plots other than cont (posest, e.g. to show stopping
+    pts)
+   -horiz plot showing position for all of run, with window on current
+    location. Slideable? (i.e. scroll bar?) let user specify maxts/mints?
+   -vertical panel with trackmaps: show rat position/direction as
+    triangle (real xy) draw values of selected segment (l) as colored
+    track segment, so can see where the replay is relative to rat's
+    position. trackmap f'n?. second window/monitor? update as cursor moves
+   -text status bar: 
+     - current cursor x, y, 
+     - rat's position at that time x (nearest neighbor)
+     - names/colors of seglists
+     - name/time of current segment, view?
+   -'play' current window as 2-D movie, call with fpfmap and rpfmap,
+    binsize, contdata
+      -select region with middle-drag, then hit M to play it
+      -tie into 'current plot' selector
+      -linear track movies, use l, ldir, offtrackd (this should be +/- for L/R)
+      -4 tracks: F/R 2D, F/R 1D, so that fwd/reverse replay more obvious
+      -rat as triangle
+      -rat's current position (eventually use DVD frames; mplayermex?)
+
+UI IDEAS:
+
+   -'selected plot' (using up/down arrows?) 
+     -for keypresses (show/hide position, movies, height, ylim).
+     -can specify on commandline.
+     -popup uipanel for each plot with controls.
+   -'plotslist': scroll through different cell arrays of plots of same
+    xlim (up/down arrows). plotslisti? (set up all plots at beginning
+    (empty)then scroll up/down with animation)
+   -control figure size (in pixels?) with arg. Useful for making
+    figures, recreating plots using argstruct (see slprint ?)
+   -bookmark: save current timewin to end of current viewlist/write
+    out to base ws?
+   -'warnings' cell array, with advisories (about, e.g. having to
+    rescale timebin, randomization) that don't go to the console every
+    time we redraw. 
+   -'esc/F1' key toggles between last view (save last sla.plots in
+    sld, or just timewin?, but not when just, e.g. showing/hiding
+    position. More general undo/redo? NOooooo!
+   -'h' for help message dialog box instead of title bar--use same
+    text
+   -'x' export keypress to export the slargs/sldata to the base
+    workspace. (textbox for var name?)
+   -mouse over rasters, find all cells w/ rasters/spikes under mouse,
+    list by color -- ick? have mkraster output a vector of cells
+    present at each data height.
+     -make context menu per raster?: exclude, plot pf, plot clusters,
+      launch xclust.
+
+DOC:
+ - spikeslpos:
+   - distributes overarching args/defaults (e, runspeed) to user's plots
+
+ - drawplot
+    - has a big switch for plots.type, e.g.
+
+      switch plots{k}.type
+       case 'parmest'
+	mkparmest (cached, so can be fast)
+	drawparmest
+       case 'raster
+        ...
+      end
+      [sl-specific draw stuff, axes, lims, flip]
+      [save tc, pe to cache]
+
+
+PROGRAMMING:
+ -Performance ideas:
+   -??did switching to 'objs' struct in drawplot slow things down
+    slightly? probably not.
+   -redrawing stuff:
+     -move cla/etc to drawparm, sometimes don't need to redraw or
+      delete ('redraw' flag? on cache_hit). store old handles in
+      sla.plots? or sld.plots corresponding to it.
+     -when redrawing, just update image cdata, xdata, ydata, rather
+      than cla/redraw.
+     -no need to do complete redraw when turning on/off segments. Just
+      use xor drawing mode and delete the handles.
+     -'interp' shading is slow during mousezoom, turn it off while
+      zooming ?
+   -use some interruptible bg process (timer?) to calculate next views
+    while waiting: right/left/zoom. AA says timers suck ass.
+ -use subimage (or do same thing myself) to convert indexed images to
+  RGB, rather than dealing with all the colormap crap
+ -have slp 'tell' each plot its 'plotno', so that it can do things
+  like, e.g. rotate default colororder for drawcont lines
+
+
+RETOOL:
+   -break out 'plots' editing from figure setup/drawing.
+   -spikeslpos will just be a wrapper for drawplot
+     -still needs to know about xstart/xend tstart/tend?
+   -get rid of dependency on having an exp struct
+   -multiple plots/axis
+     -currently just handle special cases in drawplot. Need to draw
+      things in correct order, interactions between ylim for
+      raster/parmest with and w/o parm
+   -handlegroups, uipanels, for subaxes. Can have own resize fns, etc...
