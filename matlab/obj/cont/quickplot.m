@@ -1,7 +1,7 @@
 function [p, ax, cache, hs] = quickplot(c, varargin)
 % QUICKPLOT - throw up a continuous data plot
 %
-% [p cache hs] = cplot(cdat, <param/value pairs>)
+% [p ax cache hs] = cplot(cdat, <param/value pairs>)
 %
 % cdat: contstruct to plot (optional if 'plotstruct' provided)
 % 
