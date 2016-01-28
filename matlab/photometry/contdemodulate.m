@@ -53,13 +53,16 @@ function [c_Mag, Ref_F, PSDs, cache, c_Raw] = contdemodulate(c_Raw, varargin)
 % -pass out estimated resultant Freqz for all processing.
 % -Implement with iFFT instead of bandpass/product detectorr/LPF
 % -Generate references from given frequencies (avoid recording RefX/RefY),
-%  needed for recover_carriers_from_signal', too.
-% -Handle DC as special case? Freq 0? Same LPF (code commented out below)
+%  needed for 'recover_carriers_from_signal', too. (Subtle--can have phase
+%  shifts if we get it slightly wrong, but these don't matter for
+%  magnitude?)
+% -Handle DC as special case/option? Freq 0? Same LPF (code commented out below)
 %
 % LATER
 % -zero-padding/continterp
 % -Demodulate multiple detectors (prefilter/choose sampling rates based 
-%  on all detectors to avoid aliasing)
+%  on all detectors to avoid aliasing). Maybe implement as a wrapper 
+%  function to contdemodulate?
 %
 % DONE
 % -Optionally recover frequencies from raw detector signal?
@@ -110,6 +113,7 @@ if a.recover_carriers_from_signal,
 else % Recover frequencies from the individual modulation channels
     
     % Ensure we have all the references we'll need
+    synthY = false(a.nsignals,1);
     for j = 1:a.nsignals;
         RefXstr{j} = ['Ref' num2str(j) 'X'];
         RefYstr{j} = ['Ref' num2str(j) 'Y'];
@@ -117,18 +121,43 @@ else % Recover frequencies from the individual modulation channels
             error('Must provide reference channels named: ''%s''', RefXstr{j});
         end
         if sum(strcmp(RefYstr{j}, c_Raw.chanlabels)) ~=1,
-            error('Must provide reference channel named: ''%s''', RefYstr{j});
+            synthY(j) = true;
+            warning('Quadrature ref signal ''%s'' not provided, will be synthesized', RefYstr{j});
+            % error('Must provide reference channel named: ''%s''', RefYstr{j});
         end
     end
     
     % Find peak of FFT in each RefX signal    
-    for j = 1:a.nsignals;    
+    for j = 1:a.nsignals;
         chanidx = chansfromlabels(c_Raw, RefXstr{j});
         [PSDs.Pxx_Ref(:,j), PSDs.F_Ref(:,j)] = ...
             periodogram(detrend(c_Raw.data(:,chanidx)),blackman(size(c_temp.data,1)),[],c_Raw.samplerate);
         [~,maxidx] = max(PSDs.Pxx_Ref(:,j));
+        
         Ref_F(j) = PSDs.F_Ref(maxidx); %#ok
     end
+    
+    % Synthesize missing quadrature (Y) channels if needed
+    k = 0;
+    for j = 1:a.nsignals,
+       if synthY(j),
+           
+           % we want to delay the reference by 90 deg (1/4 cycle)
+           delay = 1/4 * 1/Ref_F(j);
+
+           % create RefY as a delayed copy of RefX (by altering tstart/tend)
+           k = k+1;
+           c_RefjY(k) = contchans(c_Raw, 'chanlabels', RefXstr{j});
+           c_RefjY(k).chanlabels = RefYstr(j);
+           c_RefjY(k).tstart = c_RefjY(k).tstart+delay;
+           c_RefjY(k).tend = c_RefjY(k).tend+delay;
+       end
+    end
+    
+    % combine our new reference signals with the originals (contcombine
+    % deals with interpolating the delayed signals, and cropping to the
+    % valid, overlapping region)
+    c_Raw = contcombine(c_Raw, c_RefjY, 'match_first', true);
     
     % Discard unneeded channels from c_Raw:
     c_Raw = contchans(c_Raw, 'chanlabels', {a.detector_chanlabel RefXstr{:} RefYstr{:}});
