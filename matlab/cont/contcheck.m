@@ -27,6 +27,10 @@ end
 
 
 % Do we have correct # of chanvals/chanlabels (either 0, or nchans)?
+if ~iscell(c.chanlabels)
+    error([mfilename ':BadChanlabels'], 'chanlabels must be a cell array of strings');
+end
+
 switch numel(c.chanlabels)
  case 0
   %ok
