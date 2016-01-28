@@ -1,4 +1,4 @@
-function [c_Mag, Ref_F, PSDs, cache] = contdemodulate(c_Raw, varargin)
+function [c_Mag, Ref_F, PSDs, cache, c_Raw] = contdemodulate(c_Raw, varargin)
 % CONTDEMODULATE: do amplitude demodulation
 %
 % [c_Mag, Ref_F, PSDs, cache],...
@@ -104,7 +104,7 @@ if a.recover_carriers_from_signal,
 
     % Have yet to write code to synthesize reference frequencies below
     disp('Demodulation without reference signals not supported yet, returning recovered ref frequencies only.');
-    c_Mag = [];
+    c_Mag = []; cache = [];
     return
 
 else % Recover frequencies from the individual modulation channels
