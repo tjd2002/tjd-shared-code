@@ -125,7 +125,7 @@ else % Recover frequencies from the individual modulation channels
     for j = 1:a.nsignals;    
         chanidx = chansfromlabels(c_Raw, RefXstr{j});
         [PSDs.Pxx_Ref(:,j), PSDs.F_Ref(:,j)] = ...
-            periodogram(c_Raw.data(:,chanidx),blackman(size(c_temp.data,1)),[],c_Raw.samplerate);
+            periodogram(detrend(c_Raw.data(:,chanidx)),blackman(size(c_temp.data,1)),[],c_Raw.samplerate);
         [~,maxidx] = max(PSDs.Pxx_Ref(:,j));
         Ref_F(j) = PSDs.F_Ref(maxidx); %#ok
     end
