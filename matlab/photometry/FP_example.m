@@ -124,3 +124,42 @@ ylim([-0.1 0.25]) % common dF/F range
 title('Normalized signal');
 ylabel('dF/F');
 linkaxes(sp, 'x')
+
+
+%% Plot 'under the hood'
+
+% scale the raw inputs according to the regression (for plotting)
+c_Mag_scaled = contcombine(...
+    contchans(c_Regress, 'chans', 1),...
+    contfn(contchans(c_Regress, 'chans', 2), 'fn', @(x) x.*bls(1)+bls(2)));
+
+figure('Position', [0 0 900 500]);
+sp(1) = subplot(3,1,1); 
+title(exptname);
+quickplot(contfn(c_Mag, 'fn', @(x)x*1000),...
+    'color', [0.3 0.3 1.0; 1 0.3 1],...
+    'subsample', false);
+ylabel({'Fluorescence amplitude' '(mV at Detector)'})
+yl = ylim;
+ylim([0 yl(2)*1.1]); % show y=0
+lh(1) = legend;
+lh(1).Location = 'SouthWest';
+lh(1).Interpreter = 'none';
+
+sp(2) = subplot (3,1,2); 
+quickplot(contfn(contchans(c_FP_Raw, 'chans', [1 2 4]), 'fn', @(x)x*1000), ...
+        'subsample', false);
+title('Raw references and detector signal');
+ylabel({'mV'});
+lh(2) = legend;
+lh(2).Location = 'NorthEast';
+lh(2).Interpreter = 'none';
+
+sp(3) = subplot (3,1,3); quickplot(c_dFF, ...
+    'subsample', false, ...
+    'color', [0.3 0.6 0.3]); 
+ylim([-0.1 0.25]) % common dF/F range
+title('Normalized signal');
+ylabel('dF/F');
+linkaxes(sp, 'x')
+
