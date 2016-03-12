@@ -188,5 +188,5 @@ for j = 1:nspikes ;
         wf.timestamp(j) = (xings(j)-1)/c.samplerate+c.tstart;
         
 	% grab spikewin pts around threshold xing
-	wf.waveform(:,:,j) = data(xings(j)-a.prespikepts:xings(j)+postspikepts-1,:);
+	wf.waveform(:,:,j) = data(xings(j)-a.prespikepts:xings(j)+postspikepts-1,:)';
 end
