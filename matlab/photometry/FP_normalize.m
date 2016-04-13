@@ -11,10 +11,11 @@ function [c_out c_Regress bls YFit] = FP_normalize(c_Mag, varargin)
 %                  before fitting (Hz; no default, try: [0.1 0.2]);
 %
 % OPTIONAL INPUTS:
-%     'norm_type': dF/F denominator: control channel fit (default), constant 
-%                  value, or no normalization (see code for discussion): 
-%                  ({'fit'}, 'const', 'none')
-%    'rig_baseline_V': power in each channel before plugging in the animal
+%        'norm_type': dF/F denominator, after subtraction of fit:
+%                  'fit': divide by control channel fit (default),
+%                  'const': divide by mean fluorescence
+%                  'none': 1, just report dF
+%   'rig_baseline_V': power in each channel before plugging in the animal
 %                  (will be subtracted before normalizing, default [0 0])
 % 'dFF_zero_prctile': re-zero dFF signal to this percentile of the final
 %                  signal. Empty means do not re-zero (default: 1)
@@ -120,7 +121,7 @@ Y_fit_all = bls(1) .* XX_all + bls(2);
 % i.e. Volts)
 Y_dF_all = Y_all - Y_fit_all;
 
-% 2 options for normalization of deltaF:
+% 2 options for normalization of deltaF after subtraction of fit.
 %
 switch a.norm_type
 
