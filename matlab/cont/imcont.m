@@ -71,6 +71,7 @@ function [c timestamp ts_syn] = imcont(varargin)
 %
 %  Shared Inputs: (may be implied/overwritten depending on import type, above)
 %   'invert' - Whether to invert the sign of the data. (default: false)
+%   'scaledata' - factor by which to scale data
 %   'timewin'- range of times to select (seconds).
 %   'name'- a name for the contstruct (default: based on filename, chans).
 %   'convertdatafun' - defaults to '@single'; use [] for no conversion.
@@ -137,6 +138,7 @@ a = struct(...
   'eposflds', {{}},... % field names in an e.pos struct
   'chans', [],...
   'invert', [],...
+  'scaledata', [],...
   'timewin', [],...
   'neuralynxCSC', [],...
   'abffile', [],...
@@ -939,6 +941,11 @@ end
 %%% invert sign of data if required
 if invert,
   c.data = -c.data;
+end
+
+%%% scale data if requested
+if ~isempty(a.scaledata)
+  c.data = c.data .* a.scaledata;
 end
 
 %%% trim time more prettily (by sample now, rather than by record)
