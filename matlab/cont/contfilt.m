@@ -142,8 +142,8 @@ function c = subf_contfilter(c,filt,a)
   if ~filt.dfilt.islinphase && ~a.nonlinphaseok,
     
     % not linear phase, could use filtfilt to correct instead of erroring...
-    warning(['filter has non-linear phase distortion, delay ' ...
-           'correction could be wrong.']); %#ok
+    warning('Filter has non-linear phase distortion, group delay compensation disabled');
+    a.nodelaycorrect = true;
     
     %    warning('dfiltfilt will give sharper responses');
     %    error('dfiltfilt not yet implemented')
