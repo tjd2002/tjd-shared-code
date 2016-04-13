@@ -139,25 +139,27 @@ else % Recover frequencies from the individual modulation channels
     
     % Synthesize missing quadrature (Y) channels if needed
     k = 0;
-    for j = 1:a.nsignals,
-       if synthY(j),
-           
-           % we want to delay the reference by 90 deg (1/4 cycle)
-           delay = 1/4 * 1/Ref_F(j);
-
-           % create RefY as a delayed copy of RefX (by altering tstart/tend)
-           k = k+1;
-           c_RefjY(k) = contchans(c_Raw, 'chanlabels', RefXstr{j});
-           c_RefjY(k).chanlabels = RefYstr(j);
-           c_RefjY(k).tstart = c_RefjY(k).tstart+delay;
-           c_RefjY(k).tend = c_RefjY(k).tend+delay;
-       end
+    if any(synthY),
+        for j = 1:a.nsignals,
+            if synthY(j),
+                
+                % we want to delay the reference by 90 deg (1/4 cycle)
+                delay = 1/4 * 1/Ref_F(j);
+                
+                % create RefY as a delayed copy of RefX (by altering tstart/tend)
+                k = k+1;
+                c_RefjY(k) = contchans(c_Raw, 'chanlabels', RefXstr{j});
+                c_RefjY(k).chanlabels = RefYstr(j);
+                c_RefjY(k).tstart = c_RefjY(k).tstart+delay;
+                c_RefjY(k).tend = c_RefjY(k).tend+delay;
+            end
+        end
+        
+        % combine our new reference signals with the originals (contcombine
+        % deals with interpolating the delayed signals, and cropping to the
+        % valid, overlapping region)
+        c_Raw = contcombine(c_Raw, c_RefjY, 'match_first', true);
     end
-    
-    % combine our new reference signals with the originals (contcombine
-    % deals with interpolating the delayed signals, and cropping to the
-    % valid, overlapping region)
-    c_Raw = contcombine(c_Raw, c_RefjY, 'match_first', true);
     
     % Discard unneeded channels from c_Raw:
     c_Raw = contchans(c_Raw, 'chanlabels', {a.detector_chanlabel RefXstr{:} RefYstr{:}});
