@@ -28,7 +28,9 @@ function c = contresamp(c,varargin)
   a = struct(...
       'resample',[],...
       'tol', 0.001,...
-      'res_filtlen', 10);
+      'dec_filtlen', 30,...
+      'res_filtlen', 10,...
+      'res_beta', 5);
   
   a = parseArgsLite(varargin,a);
 
@@ -47,15 +49,16 @@ function c = contresamp(c,varargin)
       return
     end
       
-    
-    if abs((fix(1/a.resample) / (1/a.resample)) - 1) < a.tol,
+
+    warning('FORCING RESAMPLE');
+    if false
+%     if abs((fix(1/a.resample) / (1/a.resample)) - 1) < a.tol,
       % integer factor, we can use decimate
       dec_f = fix(1/a.resample);
       res_f = 1/dec_f;
 
-      % use a 30-pt FIR filter to conserve memory ('decimate' usually uses
-      % IIR/filtfilt)
-      filtlen = 30; % the default for decimate, just being explicit
+      % use a 30-pt FIR filter ('decimate' usually uses IIR/filtfilt)
+      filtlen = a.dec_filtlen; % the default for decimate, just being explicit
       
       % pre-allocate decimated array, preserving datatype of c.data
       data_dec = zeros(ceil(nrows/dec_f), ncols, datatype);
@@ -63,11 +66,16 @@ function c = contresamp(c,varargin)
       for col = 1:ncols,
         % cast to double and back since decimate doesn't like single
         % datatype (since R2007a or earlier)
-        data_dec(:,col) = cast(decimate(double(c.data(:,col)),...
-                                        dec_f, ...
-                                        filtlen,...
-                                        'fir'), ...
-                               datatype);
+                data_dec(:,col) = cast(decimate(double(c.data(:,col)),...
+                                                dec_f, ...
+                                                filtlen,...
+                                                'fir'), ...
+                                       datatype);
+        
+%         %% TEMP: USE CHEBY1 FILTER
+%         warning('Using Cheby1 filter within decimate, ignoring filtlen');
+%         data_dec(:,col) = cast(decimate(double(c.data(:,col)), dec_f),...
+%                                datatype);
       end
 
       assert(strcmp(class(data_dec), datatype), ...
@@ -101,7 +109,7 @@ function c = contresamp(c,varargin)
         % on 'single' inputs)
         data_res(:,col) = cast(resample(double(c.data(:,col)),...
                                         res_num,res_den,...
-                                        filtlen),...
+                                        filtlen,a.res_beta),...
                                datatype);
       end
       c.data = data_res;
