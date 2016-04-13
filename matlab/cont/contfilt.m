@@ -119,7 +119,7 @@ function c = subf_contfilter(c,filt,a)
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 % filter data
   
-% can't test whether 'isa' 'filt' object, so:
+% can't test whether 'isa' 'dfilt' object, so:
   try
     get(filt.dfilt,'FilterStructure');
   catch
@@ -193,8 +193,9 @@ function c = subf_contfilter(c,filt,a)
   % bad even if no group delay correction
   c.nbad_start = c.nbad_start + filtlen;
     
-  % cast it back to single, or whatever (necessary?)
-  c.data = cast(c.data, dataclass);
+%   % cast it back to single, or whatever (necessary?)
+%   c.data = cast(c.data, dataclass);
+  assert(strcmp(class(c.data),dataclass));
   
   % calculate new data range
   c = contdatarange(c);
@@ -223,7 +224,7 @@ function c = subf_autoresamp(c,filtopt)
 % $$$     
 % $$$     % find low edge of high stop-band (i.e. highest freq allowed through);
 % $$$     hiF = Ffreq(find(Fresp>autothresh,1,'last')+1); 
-% $$$     res_f = hiF*oversampf/c.samplerate;
+% $$$     res_f = hiF*2*oversampf/c.samplerate;
 
   if ~strcmp(filtopt.filttype,{'bandpass', 'lowpass'}),
     % don't want to downsample if using a highpass filter
