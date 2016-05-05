@@ -469,10 +469,10 @@ function [histedges histctrs histendedges histendctrs uniform] = ...
   elseif size(histctrs,1) == 2 || size(histedges,1) == 2,
     uniform = true;
   elseif ~isempty(histctrs) &&...
-        all(abs(diff(histctrs,2)) <= 2*eps(max(histctrs)));
+        all(abs(diff(histctrs,2)) <= 4*eps(max(histctrs)));
     uniform = true;
   elseif ~isempty(histedges) &&...
-        all(abs(diff(histedges,2)) <= 2*eps(max(histedges)));
+        all(abs(diff(histedges,2)) <= 4*eps(max(histedges)));
     uniform = true;
   end
   
