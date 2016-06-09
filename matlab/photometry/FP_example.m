@@ -14,7 +14,7 @@
 % Raw1_chanlabels = {'Det1', 'Ref1X', 'Ref1Y', 'Ref2X', 'Ref2Y', 'X1', 'Y1'};
 
 % Edit this path so it points to the 'Example Data' folder from the
-% Fiber Photometry Workshop shared folder on 
+% Fiber Photometry Workshop shared folder ( https://goo.gl/7fDBO9 )
 path_to_Example_Data = '/Users/tjd/Google Drive/Fiber Photometry Workshop/Example Data/';
 
 tanksdir = [path_to_Example_Data '/DataTanks/'];
