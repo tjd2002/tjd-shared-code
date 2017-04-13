@@ -20,8 +20,10 @@ function [c timestamp ts_syn] = imcont(varargin)
 %
 %   Raw Data:
 %   *'data' - numeric data (m x n channels)
-%    'timestamp' - time in seconds at each data point
-%    'timestamp_ends' - time of first/last sample
+%   * Specify timestamps 1 of 3 ways :
+%      'timestamp' - time in seconds at each data point
+%      'timestamp_ends' - time of first/last sample
+%      'tstart'/'samplerate' - sampling rate; tstart defaults to 0
 %    Effect on other inputs:
 %     'timeunits' - defaults to 'seconds'
 %
@@ -150,6 +152,8 @@ a = struct(...
   'buffdata', [],...
   'timestamp', [],...
   'timestamp_ends', [],...
+  'samplerate', [],...
+  'tstart', [],...
   'timeunits', '',...
   'convertdatafun', @single,...
   'ts_syn_linmode', 'ends',...
@@ -232,6 +236,10 @@ switch numel(mode)
 end
 
 mode = mode{1};
+
+if ~strcmp(mode, 'raw') && (~isempty(a.samplerate) || ~isempty(a.tstart));
+  error('''samplerate''/''tstart'' argument only supported for ''raw'' mode');
+end
 
 %% Get c.data and timestamp data from any of the import modes, then do
 %% generic processing below
@@ -720,9 +728,29 @@ switch mode
     else
       timeunits = 'seconds';
     end
+
+    % Calculate 1 timestamp/data point
+    if sum([~isempty(a.timestamp) ...
+            ~isempty(a.timestamp_ends) ...
+            ~isempty(a.samplerate)]) ~=1,
+     error('In ''raw'' mode, must provide exactly one of timestamp/timestamp_ends/samplerate arguments');
+    end
     
-    if ~isempty(a.timestamp),
+    if ~isempty(a.tstart) && isempty(a.samplerate);
+      error('''tstart'' only valid with ''samplerate'' argument.');
+    end
+    
+    if ~isempty(a.samplerate),
+      if isempty(a.tstart), 
+        tstart = 0; 
+      else
+        tstart = a.tstart; 
+      end
+      timestamp = (tstart + [0:(size(c.data,1)-1)]/a.samplerate)';
+
+    elseif ~isempty(a.timestamp),
       timestamp = a.timestamp(:);
+
     elseif ~isempty(a.timestamp_ends);
       timestamp = linspace(a.timestamp_ends(1), a.timestamp_ends(2), ...
         size(c.data,1))';
