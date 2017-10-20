@@ -326,6 +326,11 @@ function [hs, zlims] = draw2d(varargin)
       a.data(a.data < dl(1)) = dl(1);
     end
     
+    if ~diff(clim)
+      warning('clim values are non-increasing, setting second value to Inf');
+      clim(2) = Inf;
+    end
+    
     set(a.ax,'clim',clim);
     
     if a.contour,
