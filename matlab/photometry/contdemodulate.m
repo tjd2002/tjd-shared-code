@@ -277,6 +277,10 @@ if ~isempty(a.signal_labels);
     for j = 1:a.nsignals
         c_Mag.chanlabels{j} = [a.signal_labels{j} '_demod'];
     end
+else
+    for j = 1:a.nsignals
+        c_Mag.chanlabels{j} = ['demod_' a.detector_chanlabel '_' sprintf('%0.1f', Ref_F(j)) 'Hz'];
+    end
 end
 
 cache = a.cache; % for output
