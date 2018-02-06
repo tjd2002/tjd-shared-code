@@ -50,6 +50,18 @@ function [c_Mag, Ref_F, PSDs, cache, c_Raw] = contdemodulate(c_Raw, varargin)
 % By: Tom Davidson, Stanford University, 2015 (tjd@alum.mit.edu)
 
 % TODO:
+% -Handle missing/invalid data (e.g. optostim periods)
+%   -NaN/time list? autodetect rails? 
+%   1) For each demodulator, censor an integer # of periods of the carrier
+%   frequency, then re-insert placeholder values after demodulation.
+%     -Possible edge effects due to noise from other channels? 
+%     -'Momentum' in LPF before/after censoring
+%     -Equivalent to 'pausing' the stream+filtering in TDT code
+%   2) Find a LPF that can handle missing values:
+%     -KZ, (Kolmogorov-Zurbenko), a series of moving averages. See Wikipedia
+
+
+    
 % -pass out estimated resultant Freqz for all processing.
 % -Implement with iFFT instead of bandpass/product detectorr/LPF
 % -Generate references from given frequencies (avoid recording RefX/RefY),
@@ -196,12 +208,19 @@ for j = 1:a.nsignals;
         'ripp_db', a.ripp_db); %#ok
 end
 
-% Downsample raw detector channel as needed (to ~3x the max ref frequency +
-% upper sideband, so still oversampled)
+% Downsample raw detector channel as needed (to ~6x the max ref frequency +
+% upper sideband, so still oversampled). (Was 3x, but forgot about 2f
+% rectification)
 
+res_f = double(6*(max(Ref_F)+max(a.bandwidth_F(:,2))) ./ c_Raw.samplerate);
+
+if res_f<c_Raw.samplerate;
 c_Raw_ds = contresamp(...
     c_Raw, ...
-    'resample', double(3*(max(Ref_F)+max(a.bandwidth_F(:,2))) ./ c_Raw.samplerate));
+    'resample', res_f);
+else
+    c_Raw_ds = c_Raw;
+end
 
 % % Skip downsampling for now, until we understand performance of demodulator
 % % better
