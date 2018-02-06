@@ -51,7 +51,7 @@ function [c timestamp ts_syn] = imcont(varargin)
 %   .nex file (as output from TDT), depends on readNexFile.m from Plexon
 %    'nexfile' - filename of .nex file
 %
-%   TDT 'wave' event data struct, as imported by Tom's tdt2mat function
+%   TDT 'wave' event data struct, as imported by Tom's TDT_Import function
 %    'tdtwave' struct
 %    'chans' - vector of channels to use (import all by default)
 %    Effect on other inputs:

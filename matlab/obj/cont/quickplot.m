@@ -21,13 +21,14 @@ function [p, ax, cache, hs] = quickplot(c, varargin)
 %
 % Examples:
 %
-% [p] = contplot(cdat, 'chans', 1, 'timewin', [10 20], 'ylim', [-5 5], 'yscale', 'log')
+% [p] = quickplot(cdat, 'chans', 1, 'timewin', [10 20], 'ylim', [-5 5], 'yscale', 'log')
 % % advance timewin
-% [p] = contplot([], 'plotstruct', p, 'timewin', [20 30]);
+% [p] = quickplot([], 'plotstruct', p, 'timewin', [20 30]);
 
 
 % TODO:
 % -Specgrams
+% -Segs
 % -Multiple Cdats: contcombine and show on same axes
 % -Pass in filtopts/envopts?
 % -Just make a wrapper around spikeslpos instead. Get a GUI for free
